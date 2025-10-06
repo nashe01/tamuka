@@ -38,20 +38,9 @@
       android:layout_width="0dp"
       android:layout_height="wrap_content"
       android:layout_marginTop="12dp"
-      android:hint="Phone"
+      android:hint="Phone Number"
       android:inputType="phone"
       app:layout_constraintTop_toBottomOf="@id/etName"
-      app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintEnd_toEndOf="parent" />
-
-    <EditText
-      android:id="@+id/etEmail"
-      android:layout_width="0dp"
-      android:layout_height="wrap_content"
-      android:layout_marginTop="12dp"
-      android:hint="Email"
-      android:inputType="textEmailAddress"
-      app:layout_constraintTop_toBottomOf="@id/etPhone"
       app:layout_constraintStart_toStartOf="parent"
       app:layout_constraintEnd_toEndOf="parent" />
 
@@ -62,7 +51,7 @@
       android:layout_marginTop="12dp"
       android:hint="Password"
       android:inputType="textPassword"
-      app:layout_constraintTop_toBottomOf="@id/etEmail"
+      app:layout_constraintTop_toBottomOf="@id/etPhone"
       app:layout_constraintStart_toStartOf="parent"
       app:layout_constraintEnd_toEndOf="parent" />
 
@@ -71,11 +60,10 @@
       android:layout_width="0dp"
       android:layout_height="wrap_content"
       android:layout_marginTop="12dp"
+      android:entries="@array/roles"
       app:layout_constraintTop_toBottomOf="@id/etSignupPassword"
       app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintEnd_toEndOf="parent"
-      tools:listitem="@android:layout/simple_spinner_dropdown_item"
-      tools:entries="@array/roles" />
+      app:layout_constraintEnd_toEndOf="parent" />
 
     <Button
       android:id="@+id/btnCreateAccount"
@@ -101,5 +89,6 @@
   </androidx.constraintlayout.widget.ConstraintLayout>
 
 </ScrollView>
+
 
 

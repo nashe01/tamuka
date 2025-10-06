@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
+    // Add the Google services Gradle plugin
     id("com.google.gms.google-services")
+
 }
 
 android {
@@ -41,4 +43,16 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
+    // Import the Firebase BoM
+    implementation(platform(libs.firebase.bom))
+    // Firebase products (versions via BoM)
+    implementation(libs.firebase.analytics)
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.database)
+    
+    // Google Maps dependencies
+    implementation("com.google.android.gms:play-services-maps:18.1.0")
+    implementation("com.google.android.gms:play-services-location:21.0.1")
+    implementation("com.google.android.libraries.places:places:3.4.0")
+
 }

@@ -36,4 +36,7 @@
     <string name="car_color">Car Color</string>
     <string name="car_plate">Plate Number</string>
     <string name="upload_license">Upload License</string>
+    
+    <!-- Google Maps API Key -->
+    <string name="google_maps_key">AIzaSyBt2-fYTHTDZYdXMQ7CH7Ho35To3h1OhuY</string>
 </resources>
