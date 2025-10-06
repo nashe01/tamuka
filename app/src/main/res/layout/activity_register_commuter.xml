@@ -50,7 +50,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:inputType="textPersonName"
-        android:textSize="16sp" />
+        android:textSize="16sp"
+        android:importantForAutofill="no"
+        android:autofillHints="" />
 
     </com.google.android.material.textfield.TextInputLayout>
 
@@ -77,7 +79,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:inputType="textPersonName"
-        android:textSize="16sp" />
+        android:textSize="16sp"
+        android:importantForAutofill="no"
+        android:autofillHints="" />
 
     </com.google.android.material.textfield.TextInputLayout>
 
@@ -104,34 +108,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:inputType="textEmailAddress"
-        android:textSize="16sp" />
-
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <!-- Age Input -->
-    <com.google.android.material.textfield.TextInputLayout
-      android:id="@+id/tilAge"
-      android:layout_width="0dp"
-      android:layout_height="wrap_content"
-      android:layout_marginTop="16dp"
-      android:hint="Age"
-      app:layout_constraintTop_toBottomOf="@id/tilEmail"
-      app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintEnd_toEndOf="parent"
-      app:boxBackgroundMode="outline"
-      app:boxCornerRadiusTopStart="10dp"
-      app:boxCornerRadiusTopEnd="10dp"
-      app:boxCornerRadiusBottomStart="10dp"
-      app:boxCornerRadiusBottomEnd="10dp"
-      app:boxStrokeColor="@color/primary"
-      app:hintTextColor="@color/primary">
-
-      <com.google.android.material.textfield.TextInputEditText
-        android:id="@+id/etAge"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:inputType="number"
-        android:textSize="16sp" />
+        android:textSize="16sp"
+        android:importantForAutofill="no"
+        android:autofillHints="" />
 
     </com.google.android.material.textfield.TextInputLayout>
 
@@ -142,7 +121,7 @@
       android:layout_height="wrap_content"
       android:layout_marginTop="16dp"
       android:hint="Gender"
-      app:layout_constraintTop_toBottomOf="@id/tilAge"
+      app:layout_constraintTop_toBottomOf="@id/tilEmail"
       app:layout_constraintStart_toStartOf="parent"
       app:layout_constraintEnd_toEndOf="parent"
       app:boxBackgroundMode="outline"
@@ -185,7 +164,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:inputType="textPassword"
-        android:textSize="16sp" />
+        android:textSize="16sp"
+        android:importantForAutofill="no"
+        android:autofillHints="" />
 
     </com.google.android.material.textfield.TextInputLayout>
 

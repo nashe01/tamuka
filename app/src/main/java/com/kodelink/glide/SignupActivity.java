@@ -1,12 +1,16 @@
 package com.kodelink.glide;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.Spinner;
 import android.widget.Toast;
 
@@ -20,7 +24,10 @@ public class SignupActivity extends BaseActivity {
     private Spinner spinnerRole;
     private View btnCreateAccount;
     private View btnBackToLogin;
+    private ImageView keyboardToggle;
     private SharedPreferences prefs;
+    private InputMethodManager inputMethodManager;
+    private boolean isKeyboardVisible = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,11 +41,80 @@ public class SignupActivity extends BaseActivity {
         spinnerRole = findViewById(R.id.spinnerRole);
         btnCreateAccount = findViewById(R.id.btnCreateAccount);
         btnBackToLogin = findViewById(R.id.btnBackToLogin);
+        keyboardToggle = findViewById(R.id.keyboardToggle);
 
         prefs = getSharedPreferences("MockAuth", MODE_PRIVATE);
+        inputMethodManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
 
         if (btnBackToLogin != null) btnBackToLogin.setOnClickListener(v -> finish());
         if (btnCreateAccount != null) btnCreateAccount.setOnClickListener(v -> signupUser());
+        
+        // Debug: Check if keyboardToggle is found
+        if (keyboardToggle != null) {
+            Toast.makeText(this, "Keyboard toggle found!", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "Keyboard toggle NOT found!", Toast.LENGTH_SHORT).show();
+        }
+        
+        setupKeyboardToggle();
+    }
+
+    private void setupKeyboardToggle() {
+        if (keyboardToggle == null) return;
+        
+        keyboardToggle.setOnTouchListener(new View.OnTouchListener() {
+            private float startY;
+            
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        startY = event.getY();
+                        return true;
+                        
+                    case MotionEvent.ACTION_UP:
+                        float endY = event.getY();
+                        float deltaY = startY - endY;
+                        
+                        // Swipe up (or tap) - show keyboard
+                        if (deltaY > 50 || Math.abs(deltaY) < 10) {
+                            showKeyboard();
+                        }
+                        // Swipe down - hide keyboard
+                        else if (deltaY < -50) {
+                            hideKeyboardWithAnimation();
+                        }
+                        return true;
+                }
+                return false;
+            }
+        });
+    }
+
+    private void showKeyboard() {
+        if (etName != null) {
+            etName.requestFocus();
+            inputMethodManager.showSoftInput(etName, InputMethodManager.SHOW_IMPLICIT);
+            animateArrow(180f);
+            isKeyboardVisible = true;
+        }
+    }
+
+    private void hideKeyboardWithAnimation() {
+        if (keyboardToggle != null) {
+            inputMethodManager.hideSoftInputFromWindow(keyboardToggle.getWindowToken(), 0);
+            animateArrow(0f);
+            isKeyboardVisible = false;
+        }
+    }
+
+    private void animateArrow(float rotation) {
+        if (keyboardToggle != null) {
+            keyboardToggle.animate()
+                    .rotation(rotation)
+                    .setDuration(300)
+                    .start();
+        }
     }
 
     private void signupUser() {

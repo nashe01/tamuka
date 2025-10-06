@@ -21,7 +21,7 @@ import java.util.Map;
 
 public class RegisterCommuterActivity extends BaseActivity {
 
-    private TextInputEditText etName, etSurname, etEmail, etAge, etPassword;
+    private TextInputEditText etName, etSurname, etEmail, etPassword;
     private Spinner spinnerGender;
     private MaterialButton btnRegister;
     private View tvBackToRoleSelection;
@@ -43,7 +43,6 @@ public class RegisterCommuterActivity extends BaseActivity {
         etName = findViewById(R.id.etName);
         etSurname = findViewById(R.id.etSurname);
         etEmail = findViewById(R.id.etEmail);
-        etAge = findViewById(R.id.etAge);
         etPassword = findViewById(R.id.etPassword);
         spinnerGender = findViewById(R.id.spinnerGender);
         btnRegister = findViewById(R.id.btnRegister);
@@ -70,7 +69,6 @@ public class RegisterCommuterActivity extends BaseActivity {
         String name = etName.getText().toString().trim();
         String surname = etSurname.getText().toString().trim();
         String email = etEmail.getText().toString().trim();
-        String age = etAge.getText().toString().trim();
         String gender = spinnerGender.getSelectedItem().toString();
         String password = etPassword.getText().toString().trim();
 
@@ -91,10 +89,6 @@ public class RegisterCommuterActivity extends BaseActivity {
             etEmail.setError("Enter a valid email");
             return;
         }
-        if (TextUtils.isEmpty(age)) {
-            etAge.setError("Age is required");
-            return;
-        }
         if (TextUtils.isEmpty(password) || password.length() < 6) {
             etPassword.setError("Password must be at least 6 characters");
             return;
@@ -109,7 +103,7 @@ public class RegisterCommuterActivity extends BaseActivity {
                     if (task.isSuccessful()) {
                         // User created successfully, now save to database
                         String userId = mAuth.getCurrentUser().getUid();
-                        saveCommuterToDatabase(userId, name, surname, email, age, gender);
+                        saveCommuterToDatabase(userId, name, surname, email, gender);
                     } else {
                         // Registration failed
                         btnRegister.setEnabled(true);
@@ -122,12 +116,11 @@ public class RegisterCommuterActivity extends BaseActivity {
     }
 
     private void saveCommuterToDatabase(String userId, String name, String surname, 
-                                      String email, String age, String gender) {
+                                      String email, String gender) {
         Map<String, Object> commuterData = new HashMap<>();
         commuterData.put("name", name);
         commuterData.put("surname", surname);
         commuterData.put("email", email);
-        commuterData.put("age", age);
         commuterData.put("gender", gender);
         commuterData.put("role", "commuter");
 

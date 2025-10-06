@@ -1,15 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:app="http://schemas.android.com/apk/res-auto"
   xmlns:tools="http://schemas.android.com/tools"
   android:layout_width="match_parent"
-  android:layout_height="match_parent">
+  android:layout_height="match_parent"
+  android:orientation="vertical">
 
-  <androidx.constraintlayout.widget.ConstraintLayout
+  <ScrollView
+    android:id="@+id/scrollView"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:padding="24dp"
-    tools:context=".ui.auth.SignupActivity">
+    android:layout_height="0dp"
+    android:layout_weight="1"
+    android:fillViewport="true">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:padding="24dp"
+      tools:context=".ui.auth.SignupActivity">
 
     <TextView
       android:id="@+id/tvSignupTitle"
@@ -86,9 +94,26 @@
       app:layout_constraintEnd_toEndOf="parent"
       app:layout_constraintBottom_toBottomOf="parent" />
 
-  </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
-</ScrollView>
+  </ScrollView>
+
+  <!-- Keyboard Toggle Arrow -->
+  <ImageView
+    android:id="@+id/keyboardToggle"
+    android:layout_width="56dp"
+    android:layout_height="56dp"
+    android:layout_gravity="center_horizontal"
+    android:layout_marginBottom="24dp"
+    android:background="@drawable/circle_background"
+    android:padding="16dp"
+    android:src="@drawable/ic_keyboard_arrow_up"
+    android:contentDescription="Toggle keyboard"
+    android:elevation="4dp"
+    android:clickable="true"
+    android:focusable="true" />
+
+</LinearLayout>
 
 
 

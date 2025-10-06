@@ -21,7 +21,7 @@ import java.util.Map;
 
 public class RegisterDriverActivity extends BaseActivity {
 
-    private TextInputEditText etName, etSurname, etEmail, etAge, etVehicleName, etVehicleType, etVehiclePlate, etPassword;
+    private TextInputEditText etName, etSurname, etEmail, etVehicleType, etVehiclePlate, etPassword;
     private Spinner spinnerGender;
     private MaterialButton btnRegister;
     private View tvBackToRoleSelection;
@@ -43,8 +43,6 @@ public class RegisterDriverActivity extends BaseActivity {
         etName = findViewById(R.id.etName);
         etSurname = findViewById(R.id.etSurname);
         etEmail = findViewById(R.id.etEmail);
-        etAge = findViewById(R.id.etAge);
-        etVehicleName = findViewById(R.id.etVehicleName);
         etVehicleType = findViewById(R.id.etVehicleType);
         etVehiclePlate = findViewById(R.id.etVehiclePlate);
         etPassword = findViewById(R.id.etPassword);
@@ -73,9 +71,7 @@ public class RegisterDriverActivity extends BaseActivity {
         String name = etName.getText().toString().trim();
         String surname = etSurname.getText().toString().trim();
         String email = etEmail.getText().toString().trim();
-        String age = etAge.getText().toString().trim();
         String gender = spinnerGender.getSelectedItem().toString();
-        String vehicleName = etVehicleName.getText().toString().trim();
         String vehicleType = etVehicleType.getText().toString().trim();
         String vehiclePlate = etVehiclePlate.getText().toString().trim();
         String password = etPassword.getText().toString().trim();
@@ -95,14 +91,6 @@ public class RegisterDriverActivity extends BaseActivity {
         }
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             etEmail.setError("Enter a valid email");
-            return;
-        }
-        if (TextUtils.isEmpty(age)) {
-            etAge.setError("Age is required");
-            return;
-        }
-        if (TextUtils.isEmpty(vehicleName)) {
-            etVehicleName.setError("Vehicle name is required");
             return;
         }
         if (TextUtils.isEmpty(vehicleType)) {
@@ -127,8 +115,8 @@ public class RegisterDriverActivity extends BaseActivity {
                     if (task.isSuccessful()) {
                         // User created successfully, now save to database
                         String userId = mAuth.getCurrentUser().getUid();
-                        saveDriverToDatabase(userId, name, surname, email, age, gender, 
-                                          vehicleName, vehicleType, vehiclePlate);
+                        saveDriverToDatabase(userId, name, surname, email, gender, 
+                                          vehicleType, vehiclePlate);
                     } else {
                         // Registration failed
                         btnRegister.setEnabled(true);
@@ -141,15 +129,13 @@ public class RegisterDriverActivity extends BaseActivity {
     }
 
     private void saveDriverToDatabase(String userId, String name, String surname, 
-                                   String email, String age, String gender,
-                                   String vehicleName, String vehicleType, String vehiclePlate) {
+                                   String email, String gender,
+                                   String vehicleType, String vehiclePlate) {
         Map<String, Object> driverData = new HashMap<>();
         driverData.put("name", name);
         driverData.put("surname", surname);
         driverData.put("email", email);
-        driverData.put("age", age);
         driverData.put("gender", gender);
-        driverData.put("vehicleName", vehicleName);
         driverData.put("vehicleType", vehicleType);
         driverData.put("vehiclePlate", vehiclePlate);
         driverData.put("role", "driver");

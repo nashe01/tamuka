@@ -2,6 +2,8 @@ package com.kodelink.glide;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.Toast;
@@ -27,6 +29,8 @@ public class LoginActivity extends BaseActivity {
 
     private FirebaseAuth mAuth;
     private DatabaseReference mDatabase;
+    private Handler suggestionHandler;
+    private boolean suggestionsEnabled = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +49,15 @@ public class LoginActivity extends BaseActivity {
         tvForgotPassword = findViewById(R.id.tvForgotPassword);
         tvRegisterLink = findViewById(R.id.tvRegisterLink);
 
+        // Initialize suggestion handler
+        suggestionHandler = new Handler(Looper.getMainLooper());
+
+        // Setup long-press detection for input assistance
+        setupInputAssistance();
+        
+        // Setup touch detection to disable suggestions when tapping outside
+        setupTouchDetection();
+
         // Login button click
         if (btnLogin != null) {
             btnLogin.setOnClickListener(v -> loginUser());
@@ -62,6 +75,88 @@ public class LoginActivity extends BaseActivity {
             tvRegisterLink.setOnClickListener(v -> {
                 startActivity(new Intent(LoginActivity.this, RoleSelectionActivity.class));
             });
+        }
+    }
+
+    private void setupInputAssistance() {
+        // Setup long-press detection for email field
+        if (etEmail != null) {
+            etEmail.setOnLongClickListener(v -> {
+                enableSuggestionsTemporarily(etEmail);
+                return true;
+            });
+        }
+
+        // Setup long-press detection for password field
+        if (etPassword != null) {
+            etPassword.setOnLongClickListener(v -> {
+                enableSuggestionsTemporarily(etPassword);
+                return true;
+            });
+        }
+    }
+
+    private void setupTouchDetection() {
+        // Get the root view to detect touches outside input fields
+        View rootView = findViewById(android.R.id.content);
+        if (rootView != null) {
+            rootView.setOnClickListener(v -> {
+                // Disable suggestions when tapping outside input fields
+                if (suggestionsEnabled) {
+                    disableSuggestions();
+                }
+            });
+        }
+    }
+
+    private void enableSuggestionsTemporarily(TextInputEditText editText) {
+        if (suggestionsEnabled) return;
+
+        suggestionsEnabled = true;
+        
+        // Temporarily enable suggestions
+        editText.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_YES);
+        editText.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_DONE);
+        editText.setPrivateImeOptions(null);
+        
+        // Show toast to inform user
+        Toast.makeText(this, "Input assistance enabled. Tap outside to disable.", Toast.LENGTH_SHORT).show();
+        
+        // Auto-disable after 10 seconds
+        suggestionHandler.postDelayed(() -> {
+            disableSuggestions();
+        }, 10000);
+    }
+
+    private void disableSuggestions() {
+        if (!suggestionsEnabled) return;
+
+        suggestionsEnabled = false;
+        
+        // Disable suggestions for both fields
+        if (etEmail != null) {
+            etEmail.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
+            etEmail.setImeOptions(android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI | 
+                                android.view.inputmethod.EditorInfo.IME_FLAG_NO_FULLSCREEN);
+            etEmail.setPrivateImeOptions("disablePersonalization=true");
+        }
+        
+        if (etPassword != null) {
+            etPassword.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
+            etPassword.setImeOptions(android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI | 
+                                   android.view.inputmethod.EditorInfo.IME_FLAG_NO_FULLSCREEN);
+            etPassword.setPrivateImeOptions("disablePersonalization=true");
+        }
+        
+        // Clear any pending handlers
+        suggestionHandler.removeCallbacksAndMessages(null);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (suggestionHandler != null) {
+            suggestionHandler.removeCallbacksAndMessages(null);
         }
     }
 
