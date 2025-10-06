@@ -3,73 +3,141 @@
   xmlns:app="http://schemas.android.com/apk/res-auto"
   xmlns:tools="http://schemas.android.com/tools"
   android:layout_width="match_parent"
-  android:layout_height="match_parent">
+  android:layout_height="match_parent"
+  android:background="@color/white">
 
   <androidx.constraintlayout.widget.ConstraintLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="24dp"
-    tools:context=".ui.auth.LoginActivity">
+    android:padding="32dp"
+    tools:context=".LoginActivity">
 
+    <!-- App Logo/Title -->
     <TextView
       android:id="@+id/tvLoginTitle"
       android:layout_width="0dp"
       android:layout_height="wrap_content"
-      android:text="Login"
-      android:textSize="24sp"
+      android:text="Welcome to Glide"
+      android:textSize="28sp"
       android:textStyle="bold"
+      android:textColor="@color/primary"
+      android:gravity="center"
+      android:layout_marginTop="48dp"
       app:layout_constraintStart_toStartOf="parent"
       app:layout_constraintEnd_toEndOf="parent"
       app:layout_constraintTop_toTopOf="parent" />
 
-    <EditText
-      android:id="@+id/etPhone"
+    <TextView
+      android:id="@+id/tvLoginSubtitle"
       android:layout_width="0dp"
       android:layout_height="wrap_content"
-      android:layout_marginTop="24dp"
-      android:hint="Phone Number"
-      android:inputType="phone"
-      app:layout_constraintTop_toBottomOf="@id/tvLoginTitle"
+      android:text="Sign in to your account"
+      android:textSize="16sp"
+      android:textColor="@android:color/darker_gray"
+      android:gravity="center"
+      android:layout_marginTop="8dp"
       app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintEnd_toEndOf="parent" />
+      app:layout_constraintEnd_toEndOf="parent"
+      app:layout_constraintTop_toBottomOf="@id/tvLoginTitle" />
 
-    <EditText
-      android:id="@+id/etPassword"
+    <!-- Email Input -->
+    <com.google.android.material.textfield.TextInputLayout
+      android:id="@+id/tilEmail"
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="48dp"
+      android:hint="Enter Email"
+      app:layout_constraintTop_toBottomOf="@id/tvLoginSubtitle"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintEnd_toEndOf="parent"
+      app:boxBackgroundMode="outline"
+      app:boxCornerRadiusTopStart="10dp"
+      app:boxCornerRadiusTopEnd="10dp"
+      app:boxCornerRadiusBottomStart="10dp"
+      app:boxCornerRadiusBottomEnd="10dp"
+      app:boxStrokeColor="@color/primary"
+      app:hintTextColor="@color/primary">
+
+      <com.google.android.material.textfield.TextInputEditText
+        android:id="@+id/etEmail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="textEmailAddress"
+        android:textSize="16sp" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Password Input -->
+    <com.google.android.material.textfield.TextInputLayout
+      android:id="@+id/tilPassword"
       android:layout_width="0dp"
       android:layout_height="wrap_content"
       android:layout_marginTop="16dp"
       android:hint="Password"
-      android:inputType="textPassword"
-      app:layout_constraintTop_toBottomOf="@id/etPhone"
+      app:layout_constraintTop_toBottomOf="@id/tilEmail"
       app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintEnd_toEndOf="parent" />
+      app:layout_constraintEnd_toEndOf="parent"
+      app:boxBackgroundMode="outline"
+      app:boxCornerRadiusTopStart="10dp"
+      app:boxCornerRadiusTopEnd="10dp"
+      app:boxCornerRadiusBottomStart="10dp"
+      app:boxCornerRadiusBottomEnd="10dp"
+      app:boxStrokeColor="@color/primary"
+      app:hintTextColor="@color/primary"
+      app:passwordToggleEnabled="true">
 
-    <Button
+      <com.google.android.material.textfield.TextInputEditText
+        android:id="@+id/etPassword"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="textPassword"
+        android:textSize="16sp" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Login Button -->
+    <com.google.android.material.button.MaterialButton
       android:id="@+id/btnLogin"
       android:layout_width="0dp"
-      android:layout_height="wrap_content"
-      android:layout_marginTop="24dp"
+      android:layout_height="56dp"
+      android:layout_marginTop="32dp"
       android:text="Login"
-      app:layout_constraintTop_toBottomOf="@id/etPassword"
+      android:textSize="16sp"
+      android:textStyle="bold"
+      app:backgroundTint="@color/primary"
+      app:cornerRadius="10dp"
+      app:layout_constraintTop_toBottomOf="@id/tilPassword"
       app:layout_constraintStart_toStartOf="parent"
       app:layout_constraintEnd_toEndOf="parent" />
 
+    <!-- Forgot Password Link -->
     <TextView
       android:id="@+id/tvForgotPassword"
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"
       android:layout_marginTop="16dp"
       android:text="Forgot Password?"
-      android:textColor="@android:color/holo_blue_dark"
+      android:textColor="@color/primary"
+      android:textSize="14sp"
+      android:clickable="true"
+      android:focusable="true"
+      android:background="?android:attr/selectableItemBackground"
       app:layout_constraintTop_toBottomOf="@id/btnLogin"
       app:layout_constraintStart_toStartOf="parent" />
 
-    <Button
-      android:id="@+id/btnGoToSignup"
-      android:layout_width="0dp"
+    <!-- Register Link -->
+    <TextView
+      android:id="@+id/tvRegisterLink"
+      android:layout_width="wrap_content"
       android:layout_height="wrap_content"
-      android:layout_marginTop="32dp"
-      android:text="Sign Up"
+      android:layout_marginTop="48dp"
+      android:text="Don't have an account? Register here"
+      android:textColor="@color/primary"
+      android:textSize="16sp"
+      android:clickable="true"
+      android:focusable="true"
+      android:background="?android:attr/selectableItemBackground"
+      android:gravity="center"
       app:layout_constraintTop_toBottomOf="@id/tvForgotPassword"
       app:layout_constraintStart_toStartOf="parent"
       app:layout_constraintEnd_toEndOf="parent"

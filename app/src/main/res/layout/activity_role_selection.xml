@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto"
+  xmlns:tools="http://schemas.android.com/tools"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent"
+  android:background="@color/white">
+
+  <androidx.constraintlayout.widget.ConstraintLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="32dp"
+    tools:context=".RoleSelectionActivity">
+
+    <!-- Title -->
+    <TextView
+      android:id="@+id/tvTitle"
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:text="Register as"
+      android:textSize="28sp"
+      android:textStyle="bold"
+      android:textColor="@color/primary"
+      android:gravity="center"
+      android:layout_marginTop="48dp"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintEnd_toEndOf="parent"
+      app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+      android:id="@+id/tvSubtitle"
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:text="Choose your role to get started"
+      android:textSize="16sp"
+      android:textColor="@android:color/darker_gray"
+      android:gravity="center"
+      android:layout_marginTop="8dp"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintEnd_toEndOf="parent"
+      app:layout_constraintTop_toBottomOf="@id/tvTitle" />
+
+    <!-- Commuter Button -->
+    <com.google.android.material.card.MaterialCardView
+      android:id="@+id/cardCommuter"
+      android:layout_width="0dp"
+      android:layout_height="120dp"
+      android:layout_marginTop="48dp"
+      android:layout_marginHorizontal="16dp"
+      app:cardCornerRadius="16dp"
+      app:cardElevation="4dp"
+      app:strokeColor="@color/primary"
+      app:strokeWidth="2dp"
+      app:layout_constraintTop_toBottomOf="@id/tvSubtitle"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintEnd_toEndOf="parent">
+
+      <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="16dp">
+
+        <ImageView
+          android:layout_width="48dp"
+          android:layout_height="48dp"
+          android:src="@android:drawable/ic_menu_directions"
+          android:contentDescription="Commuter Icon"
+          android:tint="@color/primary" />
+
+        <TextView
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="Commuter"
+          android:textSize="18sp"
+          android:textStyle="bold"
+          android:textColor="@color/primary"
+          android:layout_marginTop="8dp" />
+
+        <TextView
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="Find rides and get around"
+          android:textSize="12sp"
+          android:textColor="@android:color/darker_gray"
+          android:gravity="center" />
+
+      </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Driver Button -->
+    <com.google.android.material.card.MaterialCardView
+      android:id="@+id/cardDriver"
+      android:layout_width="0dp"
+      android:layout_height="120dp"
+      android:layout_marginTop="24dp"
+      android:layout_marginHorizontal="16dp"
+      app:cardCornerRadius="16dp"
+      app:cardElevation="4dp"
+      app:strokeColor="@color/primary"
+      app:strokeWidth="2dp"
+      app:layout_constraintTop_toBottomOf="@id/cardCommuter"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintEnd_toEndOf="parent">
+
+      <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="16dp">
+
+        <ImageView
+          android:layout_width="48dp"
+          android:layout_height="48dp"
+          android:src="@drawable/ic_car"
+          android:contentDescription="Driver Icon"
+          android:tint="@color/primary" />
+
+        <TextView
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="Driver"
+          android:textSize="18sp"
+          android:textStyle="bold"
+          android:textColor="@color/primary"
+          android:layout_marginTop="8dp" />
+
+        <TextView
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="Offer rides and earn money"
+          android:textSize="12sp"
+          android:textColor="@android:color/darker_gray"
+          android:gravity="center" />
+
+      </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Back to Login -->
+    <TextView
+      android:id="@+id/tvBackToLogin"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="48dp"
+      android:text="Already have an account? Login here"
+      android:textColor="@color/primary"
+      android:textSize="16sp"
+      android:clickable="true"
+      android:focusable="true"
+      android:background="?android:attr/selectableItemBackground"
+      android:gravity="center"
+      app:layout_constraintTop_toBottomOf="@id/cardDriver"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintEnd_toEndOf="parent"
+      app:layout_constraintBottom_toBottomOf="parent" />
+
+  </androidx.constraintlayout.widget.ConstraintLayout>
+
+</ScrollView>

@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto"
+  xmlns:tools="http://schemas.android.com/tools"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent"
+  android:background="@color/white">
+
+  <androidx.constraintlayout.widget.ConstraintLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="24dp"
+    tools:context=".RegisterDriverActivity">
+
+    <!-- Title -->
+    <TextView
+      android:id="@+id/tvTitle"
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:text="Driver Registration"
+      android:textSize="24sp"
+      android:textStyle="bold"
+      android:textColor="@color/primary"
+      android:gravity="center"
+      android:layout_marginTop="24dp"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintEnd_toEndOf="parent"
+      app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Name Input -->
+    <com.google.android.material.textfield.TextInputLayout
+      android:id="@+id/tilName"
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="32dp"
+      android:hint="Name"
+      app:layout_constraintTop_toBottomOf="@id/tvTitle"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintEnd_toEndOf="parent"
+      app:boxBackgroundMode="outline"
+      app:boxCornerRadiusTopStart="10dp"
+      app:boxCornerRadiusTopEnd="10dp"
+      app:boxCornerRadiusBottomStart="10dp"
+      app:boxCornerRadiusBottomEnd="10dp"
+      app:boxStrokeColor="@color/primary"
+      app:hintTextColor="@color/primary">
+
+      <com.google.android.material.textfield.TextInputEditText
+        android:id="@+id/etName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="textPersonName"
+        android:textSize="16sp" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Surname Input -->
+    <com.google.android.material.textfield.TextInputLayout
+      android:id="@+id/tilSurname"
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="16dp"
+      android:hint="Surname"
+      app:layout_constraintTop_toBottomOf="@id/tilName"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintEnd_toEndOf="parent"
+      app:boxBackgroundMode="outline"
+      app:boxCornerRadiusTopStart="10dp"
+      app:boxCornerRadiusTopEnd="10dp"
+      app:boxCornerRadiusBottomStart="10dp"
+      app:boxCornerRadiusBottomEnd="10dp"
+      app:boxStrokeColor="@color/primary"
+      app:hintTextColor="@color/primary">
+
+      <com.google.android.material.textfield.TextInputEditText
+        android:id="@+id/etSurname"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="textPersonName"
+        android:textSize="16sp" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Email Input -->
+    <com.google.android.material.textfield.TextInputLayout
+      android:id="@+id/tilEmail"
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="16dp"
+      android:hint="Email"
+      app:layout_constraintTop_toBottomOf="@id/tilSurname"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintEnd_toEndOf="parent"
+      app:boxBackgroundMode="outline"
+      app:boxCornerRadiusTopStart="10dp"
+      app:boxCornerRadiusTopEnd="10dp"
+      app:boxCornerRadiusBottomStart="10dp"
+      app:boxCornerRadiusBottomEnd="10dp"
+      app:boxStrokeColor="@color/primary"
+      app:hintTextColor="@color/primary">
+
+      <com.google.android.material.textfield.TextInputEditText
+        android:id="@+id/etEmail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="textEmailAddress"
+        android:textSize="16sp" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Age Input -->
+    <com.google.android.material.textfield.TextInputLayout
+      android:id="@+id/tilAge"
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="16dp"
+      android:hint="Age"
+      app:layout_constraintTop_toBottomOf="@id/tilEmail"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintEnd_toEndOf="parent"
+      app:boxBackgroundMode="outline"
+      app:boxCornerRadiusTopStart="10dp"
+      app:boxCornerRadiusTopEnd="10dp"
+      app:boxCornerRadiusBottomStart="10dp"
+      app:boxCornerRadiusBottomEnd="10dp"
+      app:boxStrokeColor="@color/primary"
+      app:hintTextColor="@color/primary">
+
+      <com.google.android.material.textfield.TextInputEditText
+        android:id="@+id/etAge"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="number"
+        android:textSize="16sp" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Gender Spinner -->
+    <com.google.android.material.textfield.TextInputLayout
+      android:id="@+id/tilGender"
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="16dp"
+      android:hint="Gender"
+      app:layout_constraintTop_toBottomOf="@id/tilAge"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintEnd_toEndOf="parent"
+      app:boxBackgroundMode="outline"
+      app:boxCornerRadiusTopStart="10dp"
+      app:boxCornerRadiusTopEnd="10dp"
+      app:boxCornerRadiusBottomStart="10dp"
+      app:boxCornerRadiusBottomEnd="10dp"
+      app:boxStrokeColor="@color/primary"
+      app:hintTextColor="@color/primary">
+
+      <Spinner
+        android:id="@+id/spinnerGender"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Vehicle Name Input -->
+    <com.google.android.material.textfield.TextInputLayout
+      android:id="@+id/tilVehicleName"
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="16dp"
+      android:hint="Name of Vehicle"
+      app:layout_constraintTop_toBottomOf="@id/tilGender"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintEnd_toEndOf="parent"
+      app:boxBackgroundMode="outline"
+      app:boxCornerRadiusTopStart="10dp"
+      app:boxCornerRadiusTopEnd="10dp"
+      app:boxCornerRadiusBottomStart="10dp"
+      app:boxCornerRadiusBottomEnd="10dp"
+      app:boxStrokeColor="@color/primary"
+      app:hintTextColor="@color/primary">
+
+      <com.google.android.material.textfield.TextInputEditText
+        android:id="@+id/etVehicleName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="text"
+        android:textSize="16sp" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Vehicle Type Input -->
+    <com.google.android.material.textfield.TextInputLayout
+      android:id="@+id/tilVehicleType"
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="16dp"
+      android:hint="Type of Vehicle"
+      app:layout_constraintTop_toBottomOf="@id/tilVehicleName"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintEnd_toEndOf="parent"
+      app:boxBackgroundMode="outline"
+      app:boxCornerRadiusTopStart="10dp"
+      app:boxCornerRadiusTopEnd="10dp"
+      app:boxCornerRadiusBottomStart="10dp"
+      app:boxCornerRadiusBottomEnd="10dp"
+      app:boxStrokeColor="@color/primary"
+      app:hintTextColor="@color/primary">
+
+      <com.google.android.material.textfield.TextInputEditText
+        android:id="@+id/etVehicleType"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="text"
+        android:textSize="16sp" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Vehicle Plate Input -->
+    <com.google.android.material.textfield.TextInputLayout
+      android:id="@+id/tilVehiclePlate"
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="16dp"
+      android:hint="Vehicle Number Plate"
+      app:layout_constraintTop_toBottomOf="@id/tilVehicleType"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintEnd_toEndOf="parent"
+      app:boxBackgroundMode="outline"
+      app:boxCornerRadiusTopStart="10dp"
+      app:boxCornerRadiusTopEnd="10dp"
+      app:boxCornerRadiusBottomStart="10dp"
+      app:boxCornerRadiusBottomEnd="10dp"
+      app:boxStrokeColor="@color/primary"
+      app:hintTextColor="@color/primary">
+
+      <com.google.android.material.textfield.TextInputEditText
+        android:id="@+id/etVehiclePlate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="textCapCharacters"
+        android:textSize="16sp" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Password Input -->
+    <com.google.android.material.textfield.TextInputLayout
+      android:id="@+id/tilPassword"
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="16dp"
+      android:hint="Password"
+      app:layout_constraintTop_toBottomOf="@id/tilVehiclePlate"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintEnd_toEndOf="parent"
+      app:boxBackgroundMode="outline"
+      app:boxCornerRadiusTopStart="10dp"
+      app:boxCornerRadiusTopEnd="10dp"
+      app:boxCornerRadiusBottomStart="10dp"
+      app:boxCornerRadiusBottomEnd="10dp"
+      app:boxStrokeColor="@color/primary"
+      app:hintTextColor="@color/primary"
+      app:passwordToggleEnabled="true">
+
+      <com.google.android.material.textfield.TextInputEditText
+        android:id="@+id/etPassword"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="textPassword"
+        android:textSize="16sp" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Register Button -->
+    <com.google.android.material.button.MaterialButton
+      android:id="@+id/btnRegister"
+      android:layout_width="0dp"
+      android:layout_height="56dp"
+      android:layout_marginTop="32dp"
+      android:text="Register"
+      android:textSize="16sp"
+      android:textStyle="bold"
+      app:backgroundTint="@color/primary"
+      app:cornerRadius="10dp"
+      app:layout_constraintTop_toBottomOf="@id/tilPassword"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Back to Role Selection -->
+    <TextView
+      android:id="@+id/tvBackToRoleSelection"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="24dp"
+      android:text="Back to Role Selection"
+      android:textColor="@color/primary"
+      android:textSize="16sp"
+      android:clickable="true"
+      android:focusable="true"
+      android:background="?android:attr/selectableItemBackground"
+      android:gravity="center"
+      app:layout_constraintTop_toBottomOf="@id/btnRegister"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintEnd_toEndOf="parent"
+      app:layout_constraintBottom_toBottomOf="parent" />
+
+  </androidx.constraintlayout.widget.ConstraintLayout>
+
+</ScrollView>
