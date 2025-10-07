@@ -1,160 +1,178 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:app="http://schemas.android.com/apk/res-auto"
   xmlns:tools="http://schemas.android.com/tools"
   android:layout_width="match_parent"
   android:layout_height="match_parent"
-  android:background="@color/white">
+  android:background="@color/white"
+  tools:context=".LoginActivity">
 
-  <androidx.constraintlayout.widget.ConstraintLayout
+  <!-- Manual Scroll Only -->
+  <ScrollView
+    android:id="@+id/scrollView"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:padding="32dp"
-    tools:context=".LoginActivity">
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:scrollbars="none"
+    android:overScrollMode="never">
 
-    <!-- App Logo/Title -->
-    <TextView
-      android:id="@+id/tvLoginTitle"
-      android:layout_width="0dp"
+    <androidx.constraintlayout.widget.ConstraintLayout
+      android:layout_width="match_parent"
       android:layout_height="wrap_content"
-      android:text="Welcome to Glide"
-      android:textSize="28sp"
-      android:textStyle="bold"
-      android:textColor="@color/primary"
-      android:gravity="center"
-      android:layout_marginTop="48dp"
-      app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintEnd_toEndOf="parent"
-      app:layout_constraintTop_toTopOf="parent" />
+      android:padding="32dp">
 
-    <TextView
-      android:id="@+id/tvLoginSubtitle"
-      android:layout_width="0dp"
-      android:layout_height="wrap_content"
-      android:text="Sign in to your account"
-      android:textSize="16sp"
-      android:textColor="@android:color/darker_gray"
-      android:gravity="center"
-      android:layout_marginTop="8dp"
-      app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintEnd_toEndOf="parent"
-      app:layout_constraintTop_toBottomOf="@id/tvLoginTitle" />
+      <!-- App Logo -->
+      <ImageView
+        android:id="@+id/ivAppLogo"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_marginTop="48dp"
+        android:src="@mipmap/ic_launcher"
+        android:scaleType="centerCrop"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Email Input -->
-    <com.google.android.material.textfield.TextInputLayout
-      android:id="@+id/tilEmail"
-      android:layout_width="0dp"
-      android:layout_height="wrap_content"
-      android:layout_marginTop="48dp"
-      android:hint="Enter Email"
-      app:layout_constraintTop_toBottomOf="@id/tvLoginSubtitle"
-      app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintEnd_toEndOf="parent"
-      app:boxBackgroundMode="outline"
-      app:boxCornerRadiusTopStart="10dp"
-      app:boxCornerRadiusTopEnd="10dp"
-      app:boxCornerRadiusBottomStart="10dp"
-      app:boxCornerRadiusBottomEnd="10dp"
-      app:boxStrokeColor="@color/primary"
-      app:hintTextColor="@color/primary">
-
-      <com.google.android.material.textfield.TextInputEditText
-        android:id="@+id/etEmail"
-        android:layout_width="match_parent"
+      <!-- App Title -->
+      <TextView
+        android:id="@+id/tvLoginTitle"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:inputType="textEmailAddress"
-        android:textSize="16sp"
-        android:importantForAutofill="no"
-        android:autofillHints=""
-        android:imeOptions="flagNoExtractUi|flagNoFullscreen"
-        android:privateImeOptions="disablePersonalization=true" />
+        android:text="Welcome to Glide"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:textColor="@color/primary"
+        android:gravity="center"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/ivAppLogo"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <!-- Password Input -->
-    <com.google.android.material.textfield.TextInputLayout
-      android:id="@+id/tilPassword"
-      android:layout_width="0dp"
-      android:layout_height="wrap_content"
-      android:layout_marginTop="16dp"
-      android:hint="Password"
-      app:layout_constraintTop_toBottomOf="@id/tilEmail"
-      app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintEnd_toEndOf="parent"
-      app:boxBackgroundMode="outline"
-      app:boxCornerRadiusTopStart="10dp"
-      app:boxCornerRadiusTopEnd="10dp"
-      app:boxCornerRadiusBottomStart="10dp"
-      app:boxCornerRadiusBottomEnd="10dp"
-      app:boxStrokeColor="@color/primary"
-      app:hintTextColor="@color/primary"
-      app:passwordToggleEnabled="true">
-
-      <com.google.android.material.textfield.TextInputEditText
-        android:id="@+id/etPassword"
-        android:layout_width="match_parent"
+      <!-- Subtitle -->
+      <TextView
+        android:id="@+id/tvLoginSubtitle"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:inputType="textPassword"
+        android:text="Sign in to your account"
         android:textSize="16sp"
-        android:importantForAutofill="no"
-        android:autofillHints=""
-        android:imeOptions="flagNoExtractUi|flagNoFullscreen"
-        android:privateImeOptions="disablePersonalization=true" />
+        android:textColor="@android:color/darker_gray"
+        android:gravity="center"
+        android:layout_marginTop="8dp"
+        app:layout_constraintTop_toBottomOf="@id/tvLoginTitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-    </com.google.android.material.textfield.TextInputLayout>
+      <!-- Email Input -->
+      <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilEmail"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="48dp"
+        android:hint="Email"
+        app:layout_constraintTop_toBottomOf="@id/tvLoginSubtitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:boxBackgroundMode="outline"
+        app:boxCornerRadiusTopStart="10dp"
+        app:boxCornerRadiusTopEnd="10dp"
+        app:boxCornerRadiusBottomStart="10dp"
+        app:boxCornerRadiusBottomEnd="10dp"
+        app:boxStrokeColor="@color/primary">
 
-    <!-- Login Button -->
-    <com.google.android.material.button.MaterialButton
-      android:id="@+id/btnLogin"
-      android:layout_width="0dp"
-      android:layout_height="56dp"
-      android:layout_marginTop="32dp"
-      android:text="Login"
-      android:textSize="16sp"
-      android:textStyle="bold"
-      app:backgroundTint="@color/primary"
-      app:cornerRadius="10dp"
-      app:layout_constraintTop_toBottomOf="@id/tilPassword"
-      app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintEnd_toEndOf="parent" />
+        <com.google.android.material.textfield.TextInputEditText
+          android:id="@+id/etEmail"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:inputType="textEmailAddress"
+          android:textSize="16sp"
+          android:importantForAutofill="no"
+          android:autofillHints=""
+          android:imeOptions="flagNoExtractUi|flagNoFullscreen"
+          android:privateImeOptions="disablePersonalization=true" />
+      </com.google.android.material.textfield.TextInputLayout>
 
-    <!-- Forgot Password Link -->
-    <TextView
-      android:id="@+id/tvForgotPassword"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:layout_marginTop="16dp"
-      android:text="Forgot Password?"
-      android:textColor="@color/primary"
-      android:textSize="14sp"
-      android:clickable="true"
-      android:focusable="true"
-      android:background="?android:attr/selectableItemBackground"
-      app:layout_constraintTop_toBottomOf="@id/btnLogin"
-      app:layout_constraintStart_toStartOf="parent" />
+      <!-- Password Input -->
+      <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilPassword"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:hint="Password"
+        app:layout_constraintTop_toBottomOf="@id/tilEmail"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:boxBackgroundMode="outline"
+        app:boxCornerRadiusTopStart="10dp"
+        app:boxCornerRadiusTopEnd="10dp"
+        app:boxCornerRadiusBottomStart="10dp"
+        app:boxCornerRadiusBottomEnd="10dp"
+        app:boxStrokeColor="@color/primary"
+        app:passwordToggleEnabled="true">
 
-    <!-- Register Link -->
-    <TextView
-      android:id="@+id/tvRegisterLink"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:layout_marginTop="48dp"
-      android:text="Don't have an account? Register here"
-      android:textColor="@color/primary"
-      android:textSize="16sp"
-      android:clickable="true"
-      android:focusable="true"
-      android:background="?android:attr/selectableItemBackground"
-      android:gravity="center"
-      app:layout_constraintTop_toBottomOf="@id/tvForgotPassword"
-      app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintEnd_toEndOf="parent"
-      app:layout_constraintBottom_toBottomOf="parent" />
+        <com.google.android.material.textfield.TextInputEditText
+          android:id="@+id/etPassword"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:inputType="textPassword"
+          android:textSize="16sp"
+          android:importantForAutofill="no"
+          android:autofillHints=""
+          android:imeOptions="flagNoExtractUi|flagNoFullscreen"
+          android:privateImeOptions="disablePersonalization=true" />
+      </com.google.android.material.textfield.TextInputLayout>
 
-  </androidx.constraintlayout.widget.ConstraintLayout>
+      <!-- Login Button -->
+      <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnLogin"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:layout_marginTop="32dp"
+        android:text="Login"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:cornerRadius="10dp"
+        app:backgroundTint="@color/primary"
+        app:layout_constraintTop_toBottomOf="@id/tilPassword"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-</ScrollView>
+      <!-- Forgot Password -->
+      <TextView
+        android:id="@+id/tvForgotPassword"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Forgot Password?"
+        android:textColor="@color/primary"
+        android:textSize="14sp"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?android:attr/selectableItemBackground"
+        app:layout_constraintTop_toBottomOf="@id/btnLogin"
+        app:layout_constraintStart_toStartOf="parent" />
 
+      <!-- Register Link -->
+      <TextView
+        android:id="@+id/tvRegisterLink"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="48dp"
+        android:text="Don't have an account? Register here"
+        android:textColor="@color/primary"
+        android:textSize="16sp"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?android:attr/selectableItemBackground"
+        android:gravity="center"
+        app:layout_constraintTop_toBottomOf="@id/tvForgotPassword"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+  </ScrollView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
 
 
 

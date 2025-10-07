@@ -9,15 +9,15 @@ import android.view.View;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 public class LoginActivity extends BaseActivity {
 
@@ -26,9 +26,11 @@ public class LoginActivity extends BaseActivity {
     private MaterialButton btnLogin;
     private View tvForgotPassword;
     private View tvRegisterLink;
+    private Toolbar toolbar;
 
     private FirebaseAuth mAuth;
-    private DatabaseReference mDatabase;
+    private FirebaseFirestore mFirestore;
+    private FirebaseAuth.AuthStateListener mAuthStateListener;
     private Handler suggestionHandler;
     private boolean suggestionsEnabled = false;
 
@@ -40,7 +42,10 @@ public class LoginActivity extends BaseActivity {
 
         // Initialize Firebase
         mAuth = FirebaseAuth.getInstance();
-        mDatabase = FirebaseDatabase.getInstance().getReference();
+        mFirestore = FirebaseFirestore.getInstance();
+
+        // Setup Toolbar
+        setupToolbar();
 
         // Initialize views
         etEmail = findViewById(R.id.etEmail);
@@ -57,7 +62,24 @@ public class LoginActivity extends BaseActivity {
         
         // Setup touch detection to disable suggestions when tapping outside
         setupTouchDetection();
+        
+        // Setup click listeners
+        setupClickListeners();
+        
+        // Setup AuthStateListener
+        setupAuthStateListener();
+    }
 
+    private void setupToolbar() {
+        toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(false);
+            getSupportActionBar().setTitle("Login");
+        }
+    }
+
+    private void setupClickListeners() {
         // Login button click
         if (btnLogin != null) {
             btnLogin.setOnClickListener(v -> loginUser());
@@ -152,6 +174,30 @@ public class LoginActivity extends BaseActivity {
         suggestionHandler.removeCallbacksAndMessages(null);
     }
 
+    private void setupAuthStateListener() {
+        mAuthStateListener = firebaseAuth -> {
+            FirebaseUser user = firebaseAuth.getCurrentUser();
+            if (user != null) {
+                // User is signed in, check role and navigate accordingly
+                checkUserRole(user.getUid());
+            }
+        };
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        mAuth.addAuthStateListener(mAuthStateListener);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (mAuthStateListener != null) {
+            mAuth.removeAuthStateListener(mAuthStateListener);
+        }
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -166,17 +212,21 @@ public class LoginActivity extends BaseActivity {
 
         if (TextUtils.isEmpty(email)) {
             etEmail.setError("Email is required");
+            etEmail.requestFocus();
             return;
         }
         if (TextUtils.isEmpty(password)) {
             etPassword.setError("Password is required");
+            etPassword.requestFocus();
             return;
         }
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            etEmail.setError("Enter a valid email");
+            etEmail.setError("Enter a valid email address");
+            etEmail.requestFocus();
             return;
         }
 
+        // Disable button and show loading state
         btnLogin.setEnabled(false);
         btnLogin.setText("Logging in...");
 
@@ -188,71 +238,84 @@ public class LoginActivity extends BaseActivity {
                         String userId = mAuth.getCurrentUser().getUid();
                         checkUserRole(userId);
                     } else {
-                        // Login failed
+                        // Login failed - restore button state
                         btnLogin.setEnabled(true);
                         btnLogin.setText("Login");
-                        Toast.makeText(LoginActivity.this, 
-                                "Login failed: " + task.getException().getMessage(), 
-                                Toast.LENGTH_LONG).show();
+                        
+                        // Show user-friendly error message
+                        String errorMessage = getFirebaseErrorMessage(task.getException());
+                        Toast.makeText(LoginActivity.this, errorMessage, Toast.LENGTH_LONG).show();
                     }
                 });
     }
 
     private void checkUserRole(String userId) {
-        // Check if user is a commuter
-        mDatabase.child("commuters").child(userId).addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                if (dataSnapshot.exists()) {
-                    // User is a commuter
+        // Check user role in Firestore
+        mFirestore.collection("users").document(userId).get()
+                .addOnCompleteListener(task -> {
+                    // Restore button state
                     btnLogin.setEnabled(true);
                     btnLogin.setText("Login");
-                    Intent intent = new Intent(LoginActivity.this, HomeCommuterActivity.class);
-                    startActivity(intent);
-                    finish();
-                } else {
-                    // Check if user is a driver
-                    mDatabase.child("drivers").child(userId).addListenerForSingleValueEvent(new ValueEventListener() {
-                        @Override
-                        public void onDataChange(DataSnapshot dataSnapshot) {
-                btnLogin.setEnabled(true);
-                            btnLogin.setText("Login");
-                            
-                            if (dataSnapshot.exists()) {
+                    
+                    if (task.isSuccessful()) {
+                        DocumentSnapshot document = task.getResult();
+                        if (document.exists()) {
+                            String role = document.getString("role");
+                            if ("commuter".equals(role)) {
+                                // User is a commuter
+                                Intent intent = new Intent(LoginActivity.this, HomeCommuterActivity.class);
+                                startActivity(intent);
+                                finish();
+                            } else if ("driver".equals(role)) {
                                 // User is a driver
                                 Intent intent = new Intent(LoginActivity.this, DashboardDriverActivity.class);
                                 startActivity(intent);
                                 finish();
                             } else {
-                                // User not found in either role
+                                // Invalid role
                                 Toast.makeText(LoginActivity.this, 
-                                        "User data not found. Please register again.", 
+                                        "Invalid user role. Please contact support.", 
                                         Toast.LENGTH_LONG).show();
                                 mAuth.signOut();
                             }
-                        }
-
-                        @Override
-                        public void onCancelled(DatabaseError databaseError) {
-                btnLogin.setEnabled(true);
-                            btnLogin.setText("Login");
+                        } else {
+                            // User document not found
                             Toast.makeText(LoginActivity.this, 
-                                    "Database error: " + databaseError.getMessage(), 
+                                    "User data not found. Please register again.", 
                                     Toast.LENGTH_LONG).show();
+                            mAuth.signOut();
                         }
-                    });
-                }
-            }
+                    } else {
+                        // Firestore error
+                        Toast.makeText(LoginActivity.this, 
+                                "Failed to verify user data. Please try again.", 
+                                Toast.LENGTH_LONG).show();
+                        mAuth.signOut();
+                    }
+                });
+    }
 
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-            btnLogin.setEnabled(true);
-                btnLogin.setText("Login");
-                Toast.makeText(LoginActivity.this, 
-                        "Database error: " + databaseError.getMessage(), 
-                        Toast.LENGTH_LONG).show();
-            }
-        });
+    private String getFirebaseErrorMessage(Exception exception) {
+        if (exception == null) return "An unknown error occurred";
+        
+        String errorCode = exception.getMessage();
+        if (errorCode == null) return "An unknown error occurred";
+        
+        if (errorCode.contains("user-not-found")) {
+            return "No account found with this email address. Please check your email or register.";
+        } else if (errorCode.contains("wrong-password")) {
+            return "Incorrect password. Please try again.";
+        } else if (errorCode.contains("invalid-email")) {
+            return "Please enter a valid email address.";
+        } else if (errorCode.contains("user-disabled")) {
+            return "This account has been disabled. Please contact support.";
+        } else if (errorCode.contains("too-many-requests")) {
+            return "Too many failed attempts. Please try again later.";
+        } else if (errorCode.contains("network-request-failed")) {
+            return "Network error. Please check your internet connection and try again.";
+        } else {
+            return "Login failed. Please try again.";
+        }
     }
 }
 
