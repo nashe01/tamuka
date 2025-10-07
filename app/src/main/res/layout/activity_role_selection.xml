@@ -61,12 +61,12 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:padding="24dp"
+                android:padding="16dp"
                 android:background="@drawable/bg_gradient_card">
 
                 <ImageView
-                    android:layout_width="72dp"
-                    android:layout_height="72dp"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
                     android:src="@drawable/ic_commuter"
                     android:contentDescription="Commuter Icon"
                     android:tint="@color/primary" />
@@ -75,19 +75,19 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Commuter"
-                    android:textSize="22sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="@color/primary"
-                    android:layout_marginTop="12dp" />
+                    android:layout_marginTop="8dp" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Find rides and get around"
-                    android:textSize="14sp"
+                    android:textSize="12sp"
                     android:textColor="@color/primary"
                     android:gravity="center"
-                    android:layout_marginTop="4dp" />
+                    android:layout_marginTop="2dp" />
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -114,12 +114,12 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:padding="24dp"
+                android:padding="16dp"
                 android:background="@drawable/bg_gradient_card_driver">
 
                 <ImageView
-                    android:layout_width="72dp"
-                    android:layout_height="72dp"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
                     android:src="@drawable/ic_driver"
                     android:contentDescription="Driver Icon"
                     android:tint="@color/primary" />
@@ -128,19 +128,19 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Driver"
-                    android:textSize="22sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="@color/primary"
-                    android:layout_marginTop="12dp" />
+                    android:layout_marginTop="8dp" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Offer rides and earn money"
-                    android:textSize="14sp"
+                    android:textSize="12sp"
                     android:textColor="@color/primary"
                     android:gravity="center"
-                    android:layout_marginTop="4dp" />
+                    android:layout_marginTop="2dp" />
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
