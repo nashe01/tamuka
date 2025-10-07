@@ -10,7 +10,6 @@ import android.widget.Spinner;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
-import androidx.appcompat.widget.Toolbar;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
@@ -22,11 +21,10 @@ import java.util.Map;
 
 public class RegisterDriverActivity extends BaseActivity {
 
-    private TextInputEditText etName, etSurname, etEmail, etVehicleType, etVehiclePlate, etPassword, etConfirmPassword;
+    private TextInputEditText etName, etEmail, etVehicleType, etVehiclePlate, etPassword, etConfirmPassword;
     private Spinner spinnerGender;
     private MaterialButton btnRegister;
     private View tvBackToRoleSelection;
-    private Toolbar toolbar;
     private ProgressBar progressBar;
 
     private FirebaseAuth mAuth;
@@ -42,12 +40,8 @@ public class RegisterDriverActivity extends BaseActivity {
         mAuth = FirebaseAuth.getInstance();
         mFirestore = FirebaseFirestore.getInstance();
 
-        // Setup Toolbar
-        setupToolbar();
-
         // Initialize views
         etName = findViewById(R.id.etName);
-        etSurname = findViewById(R.id.etSurname);
         etEmail = findViewById(R.id.etEmail);
         etVehicleType = findViewById(R.id.etVehicleType);
         etVehiclePlate = findViewById(R.id.etVehiclePlate);
@@ -75,25 +69,9 @@ public class RegisterDriverActivity extends BaseActivity {
         });
     }
 
-    private void setupToolbar() {
-        toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle("Driver Registration");
-        }
-        
-        // Handle back button click
-        toolbar.setNavigationOnClickListener(v -> {
-            Intent intent = new Intent(RegisterDriverActivity.this, RoleSelectionActivity.class);
-            startActivity(intent);
-            finish();
-        });
-    }
 
     private void registerDriver() {
         String name = etName.getText().toString().trim();
-        String surname = etSurname.getText().toString().trim();
         String email = etEmail.getText().toString().trim();
         String gender = spinnerGender.getSelectedItem().toString();
         String vehicleType = etVehicleType.getText().toString().trim();
@@ -105,11 +83,6 @@ public class RegisterDriverActivity extends BaseActivity {
         if (TextUtils.isEmpty(name)) {
             etName.setError("Name is required");
             etName.requestFocus();
-            return;
-        }
-        if (TextUtils.isEmpty(surname)) {
-            etSurname.setError("Surname is required");
-            etSurname.requestFocus();
             return;
         }
         if (TextUtils.isEmpty(email)) {
@@ -164,7 +137,7 @@ public class RegisterDriverActivity extends BaseActivity {
                     if (task.isSuccessful()) {
                         // User created successfully, now save to Firestore
                         String userId = mAuth.getCurrentUser().getUid();
-                        saveDriverToFirestore(userId, name, surname, email, gender, 
+                        saveDriverToFirestore(userId, name, email, gender, 
                                             vehicleType, vehiclePlate);
                     } else {
                         // Registration failed - restore button state
@@ -179,12 +152,10 @@ public class RegisterDriverActivity extends BaseActivity {
                 });
     }
 
-    private void saveDriverToFirestore(String userId, String name, String surname, 
-                                     String email, String gender,
+    private void saveDriverToFirestore(String userId, String name, String email, String gender,
                                      String vehicleType, String vehiclePlate) {
         Map<String, Object> driverData = new HashMap<>();
         driverData.put("name", name);
-        driverData.put("surname", surname);
         driverData.put("email", email);
         driverData.put("gender", gender);
         driverData.put("vehicleType", vehicleType);

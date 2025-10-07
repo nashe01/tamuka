@@ -10,7 +10,6 @@ import android.widget.Spinner;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
-import androidx.appcompat.widget.Toolbar;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
@@ -22,11 +21,10 @@ import java.util.Map;
 
 public class RegisterCommuterActivity extends BaseActivity {
 
-    private TextInputEditText etName, etSurname, etEmail, etPassword, etConfirmPassword;
+    private TextInputEditText etName, etEmail, etPassword, etConfirmPassword;
     private Spinner spinnerGender;
     private MaterialButton btnRegister;
     private View tvBackToRoleSelection;
-    private Toolbar toolbar;
     private ProgressBar progressBar;
 
     private FirebaseAuth mAuth;
@@ -42,12 +40,8 @@ public class RegisterCommuterActivity extends BaseActivity {
         mAuth = FirebaseAuth.getInstance();
         mFirestore = FirebaseFirestore.getInstance();
 
-        // Setup Toolbar
-        setupToolbar();
-
         // Initialize views
         etName = findViewById(R.id.etName);
-        etSurname = findViewById(R.id.etSurname);
         etEmail = findViewById(R.id.etEmail);
         etPassword = findViewById(R.id.etPassword);
         etConfirmPassword = findViewById(R.id.etConfirmPassword);
@@ -73,25 +67,9 @@ public class RegisterCommuterActivity extends BaseActivity {
         });
     }
 
-    private void setupToolbar() {
-        toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle("Commuter Registration");
-        }
-        
-        // Handle back button click
-        toolbar.setNavigationOnClickListener(v -> {
-            Intent intent = new Intent(RegisterCommuterActivity.this, RoleSelectionActivity.class);
-            startActivity(intent);
-            finish();
-        });
-    }
 
     private void registerCommuter() {
         String name = etName.getText().toString().trim();
-        String surname = etSurname.getText().toString().trim();
         String email = etEmail.getText().toString().trim();
         String gender = spinnerGender.getSelectedItem().toString();
         String password = etPassword.getText().toString().trim();
@@ -101,11 +79,6 @@ public class RegisterCommuterActivity extends BaseActivity {
         if (TextUtils.isEmpty(name)) {
             etName.setError("Name is required");
             etName.requestFocus();
-            return;
-        }
-        if (TextUtils.isEmpty(surname)) {
-            etSurname.setError("Surname is required");
-            etSurname.requestFocus();
             return;
         }
         if (TextUtils.isEmpty(email)) {
@@ -150,7 +123,7 @@ public class RegisterCommuterActivity extends BaseActivity {
                     if (task.isSuccessful()) {
                         // User created successfully, now save to Firestore
                         String userId = mAuth.getCurrentUser().getUid();
-                        saveCommuterToFirestore(userId, name, surname, email, gender);
+                        saveCommuterToFirestore(userId, name, email, gender);
                     } else {
                         // Registration failed - restore button state
                         btnRegister.setEnabled(true);
@@ -164,11 +137,9 @@ public class RegisterCommuterActivity extends BaseActivity {
                 });
     }
 
-    private void saveCommuterToFirestore(String userId, String name, String surname, 
-                                        String email, String gender) {
+    private void saveCommuterToFirestore(String userId, String name, String email, String gender) {
         Map<String, Object> commuterData = new HashMap<>();
         commuterData.put("name", name);
-        commuterData.put("surname", surname);
         commuterData.put("email", email);
         commuterData.put("gender", gender);
         commuterData.put("role", "commuter");

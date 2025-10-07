@@ -6,7 +6,6 @@ import android.view.View;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
-import androidx.appcompat.widget.Toolbar;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
@@ -16,7 +15,6 @@ public class ForgotPasswordActivity extends BaseActivity {
     
     private TextInputEditText etEmail;
     private MaterialButton btnSubmitReset;
-    private Toolbar toolbar;
     private FirebaseAuth mAuth;
     
     @Override
@@ -28,9 +26,6 @@ public class ForgotPasswordActivity extends BaseActivity {
         // Initialize Firebase
         mAuth = FirebaseAuth.getInstance();
 
-        // Setup Toolbar
-        setupToolbar();
-
         // Initialize views
         etEmail = findViewById(R.id.etEmail);
         btnSubmitReset = findViewById(R.id.btnSubmitReset);
@@ -39,17 +34,6 @@ public class ForgotPasswordActivity extends BaseActivity {
         btnSubmitReset.setOnClickListener(v -> resetPassword());
     }
 
-    private void setupToolbar() {
-        toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle("Reset Password");
-        }
-        
-        // Handle back button click
-        toolbar.setNavigationOnClickListener(v -> finish());
-    }
 
     private void resetPassword() {
         String email = etEmail.getText().toString().trim();

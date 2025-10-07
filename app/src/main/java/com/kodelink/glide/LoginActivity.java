@@ -10,7 +10,6 @@ import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
@@ -26,7 +25,6 @@ public class LoginActivity extends BaseActivity {
     private MaterialButton btnLogin;
     private View tvForgotPassword;
     private View tvRegisterLink;
-    private Toolbar toolbar;
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore mFirestore;
@@ -43,9 +41,6 @@ public class LoginActivity extends BaseActivity {
         // Initialize Firebase
         mAuth = FirebaseAuth.getInstance();
         mFirestore = FirebaseFirestore.getInstance();
-
-        // Setup Toolbar
-        setupToolbar();
 
         // Initialize views
         etEmail = findViewById(R.id.etEmail);
@@ -70,14 +65,6 @@ public class LoginActivity extends BaseActivity {
         setupAuthStateListener();
     }
 
-    private void setupToolbar() {
-        toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(false);
-            getSupportActionBar().setTitle("Login");
-        }
-    }
 
     private void setupClickListeners() {
         // Login button click
