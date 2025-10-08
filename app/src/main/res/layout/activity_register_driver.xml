@@ -126,7 +126,7 @@
       android:id="@+id/tilGender"
       android:layout_width="0dp"
       android:layout_height="wrap_content"
-      android:layout_marginTop="16dp"
+      android:layout_marginTop="0dp"
       android:hint="Gender"
       app:layout_constraintTop_toBottomOf="@id/nameEmailContainer"
       app:layout_constraintStart_toStartOf="parent"
@@ -143,7 +143,7 @@
       <Spinner
         android:id="@+id/spinnerGender"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="40dp"
         android:paddingStart="20dp"
         android:paddingEnd="20dp" />
 
@@ -154,7 +154,7 @@
       android:id="@+id/tilVehicleType"
       android:layout_width="0dp"
       android:layout_height="wrap_content"
-      android:layout_marginTop="16dp"
+      android:layout_marginTop="0dp"
       android:hint="Type of Vehicle"
       app:layout_constraintTop_toBottomOf="@id/tilGender"
       app:layout_constraintStart_toStartOf="parent"
