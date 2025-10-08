@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MenuItem;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -24,8 +25,12 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.switchmaterial.SwitchMaterial;
+
+import java.util.List;
 
 public class DashboardDriverActivity extends AppCompatActivity implements OnMapReadyCallback, NavigationView.OnNavigationItemSelectedListener {
 
@@ -42,6 +47,12 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
     private DrawerLayout drawerLayout;
     private NavigationView navigationView;
     private SharedPreferences prefs;
+    
+    // Ride request handling variables
+    private FirebaseService firebaseService;
+    private String currentDriverId;
+    private LatLng currentLocation;
+    private RideRequest currentRideRequest;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,6 +69,17 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
 
         // Initialize preferences
         prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        
+        // Get current driver ID
+        SharedPreferences authPrefs = getSharedPreferences("MockAuth", MODE_PRIVATE);
+        String currentUserPhone = authPrefs.getString("current_user_phone", "");
+        currentDriverId = "driver_" + currentUserPhone.replaceAll("[^0-9]", "");
+
+        // Initialize Firebase service
+        firebaseService = FirebaseService.getInstance();
+        
+        // Create driver profile in Firebase
+        createDriverProfile();
 
         // Initialize location client
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
@@ -85,7 +107,19 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
             // Save status to SharedPreferences
             prefs.edit().putBoolean(KEY_DRIVER_STATUS, isChecked).apply();
             
-            Toast.makeText(this, "Status updated: " + status, Toast.LENGTH_SHORT).show();
+            // Update availability in Firebase
+            String availability = isChecked ? "available" : "offline";
+            firebaseService.updateDriverAvailability(currentDriverId, availability, new FirebaseService.DatabaseCallback() {
+                @Override
+                public void onSuccess(String message) {
+                    Toast.makeText(DashboardDriverActivity.this, "Status updated: " + status, Toast.LENGTH_SHORT).show();
+                }
+                
+                @Override
+                public void onError(String error) {
+                    Toast.makeText(DashboardDriverActivity.this, "Failed to update status: " + error, Toast.LENGTH_SHORT).show();
+                }
+            });
         });
 
         // Load saved availability status
@@ -98,6 +132,9 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
 
         // Update header with user role
         updateNavigationHeader();
+
+        // Set up ride request listening
+        setupRideRequestListening();
 
         // Request location permission
         requestLocationPermission();
@@ -148,7 +185,7 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
             fusedLocationClient.getLastLocation()
                     .addOnSuccessListener(this, location -> {
                         if (location != null) {
-                            LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
+                            currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
                             
                             // Add marker for current location
                             googleMap.addMarker(new MarkerOptions()
@@ -157,8 +194,33 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
                             
                             // Move camera to current location
                             googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 15f));
+                            
+                            // Update driver location in Firebase
+                            updateDriverLocationInFirebase();
                         }
                     });
+        }
+    }
+    
+    private void updateDriverLocationInFirebase() {
+        if (currentLocation != null) {
+            Driver.LocationData locationData = new Driver.LocationData(
+                    currentLocation.latitude, 
+                    currentLocation.longitude, 
+                    "Current Location"
+            );
+            
+            firebaseService.updateDriverLocation(currentDriverId, locationData, new FirebaseService.DatabaseCallback() {
+                @Override
+                public void onSuccess(String message) {
+                    // Location updated successfully
+                }
+                
+                @Override
+                public void onError(String error) {
+                    // Handle error if needed
+                }
+            });
         }
     }
 
@@ -209,5 +271,123 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
         if (tvUserRole != null) {
             tvUserRole.setText(role.equals("driver") ? "Driver" : "Commuter");
         }
+    }
+    
+    private void setupRideRequestListening() {
+        // Listen for incoming ride requests
+        firebaseService.listenToDriverRideRequests(currentDriverId, new FirebaseService.RideRequestListener() {
+            @Override
+            public void onRideRequestUpdated(RideRequest rideRequest) {
+                if ("pending".equals(rideRequest.status)) {
+                    currentRideRequest = rideRequest;
+                    showIncomingRideRequestDialog(rideRequest);
+                }
+            }
+            
+            @Override
+            public void onError(String error) {
+                Toast.makeText(DashboardDriverActivity.this, "Error listening to ride requests: " + error, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+    
+    private void showIncomingRideRequestDialog(RideRequest rideRequest) {
+        String message = "New ride request!\n\n" +
+                "Pickup: " + rideRequest.pickupLocation.address + "\n" +
+                "Destination: " + rideRequest.destination.address + "\n" +
+                "Distance: " + calculateDistance(
+                        new LatLng(rideRequest.pickupLocation.lat, rideRequest.pickupLocation.lng),
+                        currentLocation
+                ) + " km";
+        
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Incoming Ride Request")
+                .setMessage(message)
+                .setPositiveButton("Accept", (dialog, which) -> {
+                    acceptRideRequest(rideRequest);
+                })
+                .setNegativeButton("Decline", (dialog, which) -> {
+                    declineRideRequest(rideRequest);
+                })
+                .setCancelable(false)
+                .show();
+    }
+    
+    private void acceptRideRequest(RideRequest rideRequest) {
+        // Update ride request status to accepted
+        firebaseService.updateRideRequestStatus(rideRequest.rideId, "accepted", new FirebaseService.DatabaseCallback() {
+            @Override
+            public void onSuccess(String message) {
+                Toast.makeText(DashboardDriverActivity.this, "Ride accepted! Navigate to pickup location.", Toast.LENGTH_LONG).show();
+                // Here you would navigate to ride tracking screen
+            }
+            
+            @Override
+            public void onError(String error) {
+                Toast.makeText(DashboardDriverActivity.this, "Failed to accept ride: " + error, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+    
+    private void declineRideRequest(RideRequest rideRequest) {
+        // Update ride request status to declined
+        firebaseService.updateRideRequestStatus(rideRequest.rideId, "declined", new FirebaseService.DatabaseCallback() {
+            @Override
+            public void onSuccess(String message) {
+                Toast.makeText(DashboardDriverActivity.this, "Ride declined", Toast.LENGTH_SHORT).show();
+            }
+            
+            @Override
+            public void onError(String error) {
+                Toast.makeText(DashboardDriverActivity.this, "Failed to decline ride: " + error, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+    
+    private double calculateDistance(LatLng point1, LatLng point2) {
+        if (point1 == null || point2 == null) return 0;
+        
+        double lat1 = point1.latitude;
+        double lon1 = point1.longitude;
+        double lat2 = point2.latitude;
+        double lon2 = point2.longitude;
+        
+        final int R = 6371; // Radius of the earth in km
+        double latDistance = Math.toRadians(lat2 - lat1);
+        double lonDistance = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        double distance = R * c; // convert to kilometers
+        
+        return Math.round(distance * 100.0) / 100.0;
+    }
+    
+    private void createDriverProfile() {
+        SharedPreferences authPrefs = getSharedPreferences("MockAuth", MODE_PRIVATE);
+        String driverName = authPrefs.getString(currentDriverId.replace("driver_", "") + "_name", "Driver");
+        
+        Driver driver = new Driver(
+                currentDriverId,
+                driverName,
+                currentDriverId.replace("driver_", ""),
+                new Driver.LocationData(0, 0, "Unknown Location"),
+                4.5,
+                0,
+                "offline"
+        );
+        
+        firebaseService.createDriver(driver, new FirebaseService.DatabaseCallback() {
+            @Override
+            public void onSuccess(String message) {
+                Log.d("DashboardDriverActivity", "Driver profile created: " + message);
+            }
+            
+            @Override
+            public void onError(String error) {
+                Log.e("DashboardDriverActivity", "Failed to create driver profile: " + error);
+            }
+        });
     }
 }

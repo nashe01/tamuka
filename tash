@@ -1,0 +1,36 @@
+warning: in the working copy of 'app/build.gradle.kts', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/app/build.gradle.kts b/app/build.gradle.kts[m
+[1mindex 40078ae..5d96c40 100644[m
+[1m--- a/app/build.gradle.kts[m
+[1m+++ b/app/build.gradle.kts[m
+[36m@@ -3,6 +3,7 @@[m [mplugins {[m
+     // Add the Google services Gradle plugin[m
+     id("com.google.gms.google-services")[m
+ [m
+[32m+[m
+ }[m
+ [m
+ android {[m
+[36m@@ -49,9 +50,21 @@[m [mdependencies {[m
+     implementation(libs.firebase.analytics)[m
+     implementation(libs.firebase.auth)[m
+     implementation(libs.firebase.database)[m
+[32m+[m[32m    // Import the Firebase BoM[m
+[32m+[m[32m    implementation(platform("com.google.firebase:firebase-bom:34.3.0"))[m
+[32m+[m
+[32m+[m
+[32m+[m[32m    // TODO: Add the dependencies for Firebase products you want to use[m
+[32m+[m[32m    // When using the BoM, don't specify versions in Firebase dependencies[m
+[32m+[m[32m    implementation("com.google.firebase:firebase-analytics")[m
+[32m+[m
+[32m+[m
+[32m+[m[32m    // Add the dependencies for any other desired Firebase products[m
+[32m+[m[32m    // https://firebase.google.com/docs/android/setup#available-libraries[m
+     [m
+     // Google Maps dependencies[m
+     implementation("com.google.android.gms:play-services-maps:18.1.0")[m
+     implementation("com.google.android.gms:play-services-location:21.0.1")[m
+ [m
+[32m+[m
+ }[m
+\ No newline at end of file[m

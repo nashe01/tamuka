@@ -1,0 +1,1029 @@
+GLIDE APP - AUTHENTICATION SYSTEM DOCUMENTATION
+==================================================
+
+OVERVIEW
+--------
+The app currently has TWO authentication systems running in parallel:
+1. Legacy Mock System (Phone-based, SharedPreferences) - DEPRECATED
+2. Firebase Authentication System (Email-based, Real-time Database) - CURRENT
+
+This document outlines the technical flow and all authentication-related code.
+
+================================================================================
+1. FIREBASE CONFIGURATION & SETUP
+================================================================================
+
+File: app/google-services.json
+-------------------------------
+{
+  "project_info": {
+    "project_number": "510252196281",
+    "firebase_url": "https://glide-77761-default-rtdb.firebaseio.com",
+    "project_id": "glide-77761",
+    "storage_bucket": "glide-77761.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:510252196281:android:b677ba642bc5ef0a721668",
+        "android_client_info": {
+          "package_name": "com.kodelink.glide"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB7KJb0t3sAdtwQ22aRs3KL_ybGwlYXWP0"
+        }
+      ]
+    }
+  ]
+}
+
+File: app/build.gradle.kts
+---------------------------
+plugins {
+    alias(libs.plugins.android.application)
+    id("com.google.gms.google-services")
+}
+
+dependencies {
+    // Firebase BoM
+    implementation(platform(libs.firebase.bom))
+    // Firebase products
+    implementation(libs.firebase.analytics)
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.database)
+}
+
+File: app/src/main/java/com/kodelink/glide/FirebaseService.java
+---------------------------------------------------------------
+package com.kodelink.glide;
+
+import android.util.Log;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+import java.util.ArrayList;
+import java.util.List;
+
+public class FirebaseService {
+    private static final String TAG = "FirebaseService";
+    private static FirebaseService instance;
+    private DatabaseReference database;
+
+    private FirebaseService() {
+        database = FirebaseDatabase.getInstance("https://glide-77761-default-rtdb.firebaseio.com/").getReference();
+    }
+
+    public static FirebaseService getInstance() {
+        if (instance == null) {
+            instance = new FirebaseService();
+        }
+        return instance;
+    }
+
+    // Database operations for ride requests, user management, etc.
+    public void createRideRequest(RideRequest rideRequest, DatabaseCallback callback) {
+        DatabaseReference rideRequestsRef = database.child("rideRequests").child(rideRequest.rideId);
+        rideRequestsRef.setValue(rideRequest)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "Ride request created successfully");
+                    callback.onSuccess("Ride request created");
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to create ride request", e);
+                    callback.onError(e.getMessage());
+                });
+    }
+}
+
+================================================================================
+2. BASE ACTIVITY CLASS
+================================================================================
+
+File: app/src/main/java/com/kodelink/glide/BaseActivity.java
+-----------------------------------------------------------
+package com.kodelink.glide;
+
+import android.content.Context;
+import android.graphics.Rect;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
+import androidx.appcompat.app.AppCompatActivity;
+
+public abstract class BaseActivity extends AppCompatActivity {
+
+    protected void hideKeyboard() {
+        View view = this.getCurrentFocus();
+        if (view != null) {
+            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null) {
+                imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+            }
+        }
+    }
+
+    protected void showKeyboard(View view) {
+        if (view != null) {
+            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null) {
+                imm.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT);
+            }
+        }
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        if (ev.getAction() == MotionEvent.ACTION_DOWN) {
+            View v = getCurrentFocus();
+            if (v instanceof EditText) {
+                Rect outRect = new Rect();
+                v.getGlobalVisibleRect(outRect);
+                if (!outRect.contains((int) ev.getRawX(), (int) ev.getRawY())) {
+                    v.clearFocus();
+                    hideKeyboard();
+                }
+            }
+        }
+        return super.dispatchTouchEvent(ev);
+    }
+}
+
+================================================================================
+3. ROLE SELECTION (ENTRY POINT)
+================================================================================
+
+File: app/src/main/java/com/kodelink/glide/RoleSelectionActivity.java
+--------------------------------------------------------------------
+// This activity allows users to choose between Driver or Commuter registration
+// Navigation: LoginActivity -> RoleSelectionActivity -> RegisterDriverActivity/RegisterCommuterActivity
+
+================================================================================
+4. DRIVER REGISTRATION FLOW
+================================================================================
+
+File: app/src/main/java/com/kodelink/glide/RegisterDriverActivity.java
+---------------------------------------------------------------------
+package com.kodelink.glide;
+
+import android.content.Intent;
+import android.os.Bundle;
+import android.text.TextUtils;
+import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.Spinner;
+import android.widget.Toast;
+import androidx.activity.EdgeToEdge;
+import androidx.appcompat.widget.Toolbar;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import java.util.HashMap;
+import java.util.Map;
+
+public class RegisterDriverActivity extends BaseActivity {
+
+    private TextInputEditText etName, etSurname, etEmail, etVehicleType, etVehiclePlate, etPassword;
+    private Spinner spinnerGender;
+    private MaterialButton btnRegister;
+    private View tvBackToRoleSelection;
+    private Toolbar toolbar;
+
+    private FirebaseAuth mAuth;
+    private DatabaseReference mDatabase;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        EdgeToEdge.enable(this);
+        setContentView(R.layout.activity_register_driver);
+
+        // Initialize Firebase
+        mAuth = FirebaseAuth.getInstance();
+        mDatabase = FirebaseDatabase.getInstance().getReference();
+
+        // Setup Toolbar
+        setupToolbar();
+
+        // Initialize views
+        etName = findViewById(R.id.etName);
+        etSurname = findViewById(R.id.etSurname);
+        etEmail = findViewById(R.id.etEmail);
+        etVehicleType = findViewById(R.id.etVehicleType);
+        etVehiclePlate = findViewById(R.id.etVehiclePlate);
+        etPassword = findViewById(R.id.etPassword);
+        spinnerGender = findViewById(R.id.spinnerGender);
+        btnRegister = findViewById(R.id.btnRegister);
+        tvBackToRoleSelection = findViewById(R.id.tvBackToRoleSelection);
+
+        // Setup gender spinner
+        String[] genderOptions = {"Male", "Female", "Other"};
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, genderOptions);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerGender.setAdapter(adapter);
+
+        // Register button click
+        btnRegister.setOnClickListener(v -> registerDriver());
+
+        // Back to role selection
+        tvBackToRoleSelection.setOnClickListener(v -> {
+            Intent intent = new Intent(RegisterDriverActivity.this, RoleSelectionActivity.class);
+            startActivity(intent);
+            finish();
+        });
+    }
+
+    private void registerDriver() {
+        String name = etName.getText().toString().trim();
+        String surname = etSurname.getText().toString().trim();
+        String email = etEmail.getText().toString().trim();
+        String gender = spinnerGender.getSelectedItem().toString();
+        String vehicleType = etVehicleType.getText().toString().trim();
+        String vehiclePlate = etVehiclePlate.getText().toString().trim();
+        String password = etPassword.getText().toString().trim();
+
+        // Validate inputs
+        if (TextUtils.isEmpty(name)) {
+            etName.setError("Name is required");
+            return;
+        }
+        if (TextUtils.isEmpty(surname)) {
+            etSurname.setError("Surname is required");
+            return;
+        }
+        if (TextUtils.isEmpty(email)) {
+            etEmail.setError("Email is required");
+            return;
+        }
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            etEmail.setError("Enter a valid email");
+            return;
+        }
+        if (TextUtils.isEmpty(vehicleType)) {
+            etVehicleType.setError("Vehicle type is required");
+            return;
+        }
+        if (TextUtils.isEmpty(vehiclePlate)) {
+            etVehiclePlate.setError("Vehicle plate is required");
+            return;
+        }
+        if (TextUtils.isEmpty(password) || password.length() < 6) {
+            etPassword.setError("Password must be at least 6 characters");
+            return;
+        }
+
+        btnRegister.setEnabled(false);
+        btnRegister.setText("Registering...");
+
+        // Create Firebase Auth user
+        mAuth.createUserWithEmailAndPassword(email, password)
+                .addOnCompleteListener(this, task -> {
+                    if (task.isSuccessful()) {
+                        // User created successfully, now save to database
+                        String userId = mAuth.getCurrentUser().getUid();
+                        saveDriverToDatabase(userId, name, surname, email, gender, 
+                                          vehicleType, vehiclePlate);
+                    } else {
+                        // Registration failed
+                        btnRegister.setEnabled(true);
+                        btnRegister.setText("Register");
+                        Toast.makeText(RegisterDriverActivity.this, 
+                                "Registration failed: " + task.getException().getMessage(), 
+                                Toast.LENGTH_LONG).show();
+                    }
+                });
+    }
+
+    private void saveDriverToDatabase(String userId, String name, String surname, 
+                                   String email, String gender,
+                                   String vehicleType, String vehiclePlate) {
+        Map<String, Object> driverData = new HashMap<>();
+        driverData.put("name", name);
+        driverData.put("surname", surname);
+        driverData.put("email", email);
+        driverData.put("gender", gender);
+        driverData.put("vehicleType", vehicleType);
+        driverData.put("vehiclePlate", vehiclePlate);
+        driverData.put("role", "driver");
+        driverData.put("rating", 0);
+        driverData.put("completedRides", 0);
+        driverData.put("availability", "offline");
+
+        mDatabase.child("drivers").child(userId).setValue(driverData)
+                .addOnCompleteListener(task -> {
+                    btnRegister.setEnabled(true);
+                    btnRegister.setText("Register");
+                    
+                    if (task.isSuccessful()) {
+                        Toast.makeText(RegisterDriverActivity.this, 
+                                "Registration successful!", Toast.LENGTH_SHORT).show();
+                        
+                        // Navigate to DashboardDriverActivity
+                        Intent intent = new Intent(RegisterDriverActivity.this, DashboardDriverActivity.class);
+                        startActivity(intent);
+                        finish();
+                    } else {
+                        Toast.makeText(RegisterDriverActivity.this, 
+                                "Failed to save user data: " + task.getException().getMessage(), 
+                                Toast.LENGTH_LONG).show();
+                    }
+                });
+    }
+}
+
+================================================================================
+5. COMMUTER REGISTRATION FLOW
+================================================================================
+
+File: app/src/main/java/com/kodelink/glide/RegisterCommuterActivity.java
+-----------------------------------------------------------------------
+package com.kodelink.glide;
+
+import android.content.Intent;
+import android.os.Bundle;
+import android.text.TextUtils;
+import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.Spinner;
+import android.widget.Toast;
+import androidx.activity.EdgeToEdge;
+import androidx.appcompat.widget.Toolbar;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import java.util.HashMap;
+import java.util.Map;
+
+public class RegisterCommuterActivity extends BaseActivity {
+
+    private TextInputEditText etName, etSurname, etEmail, etPassword;
+    private Spinner spinnerGender;
+    private MaterialButton btnRegister;
+    private View tvBackToRoleSelection;
+    private Toolbar toolbar;
+
+    private FirebaseAuth mAuth;
+    private DatabaseReference mDatabase;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        EdgeToEdge.enable(this);
+        setContentView(R.layout.activity_register_commuter);
+
+        // Initialize Firebase
+        mAuth = FirebaseAuth.getInstance();
+        mDatabase = FirebaseDatabase.getInstance().getReference();
+
+        // Setup Toolbar
+        setupToolbar();
+
+        // Initialize views
+        etName = findViewById(R.id.etName);
+        etSurname = findViewById(R.id.etSurname);
+        etEmail = findViewById(R.id.etEmail);
+        etPassword = findViewById(R.id.etPassword);
+        spinnerGender = findViewById(R.id.spinnerGender);
+        btnRegister = findViewById(R.id.btnRegister);
+        tvBackToRoleSelection = findViewById(R.id.tvBackToRoleSelection);
+
+        // Setup gender spinner
+        String[] genderOptions = {"Male", "Female", "Other"};
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, genderOptions);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerGender.setAdapter(adapter);
+
+        // Register button click
+        btnRegister.setOnClickListener(v -> registerCommuter());
+
+        // Back to role selection
+        tvBackToRoleSelection.setOnClickListener(v -> {
+            Intent intent = new Intent(RegisterCommuterActivity.this, RoleSelectionActivity.class);
+            startActivity(intent);
+            finish();
+        });
+    }
+
+    private void registerCommuter() {
+        String name = etName.getText().toString().trim();
+        String surname = etSurname.getText().toString().trim();
+        String email = etEmail.getText().toString().trim();
+        String gender = spinnerGender.getSelectedItem().toString();
+        String password = etPassword.getText().toString().trim();
+
+        // Validate inputs
+        if (TextUtils.isEmpty(name)) {
+            etName.setError("Name is required");
+            return;
+        }
+        if (TextUtils.isEmpty(surname)) {
+            etSurname.setError("Surname is required");
+            return;
+        }
+        if (TextUtils.isEmpty(email)) {
+            etEmail.setError("Email is required");
+            return;
+        }
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            etEmail.setError("Enter a valid email");
+            return;
+        }
+        if (TextUtils.isEmpty(password) || password.length() < 6) {
+            etPassword.setError("Password must be at least 6 characters");
+            return;
+        }
+
+        btnRegister.setEnabled(false);
+        btnRegister.setText("Registering...");
+
+        // Create Firebase Auth user
+        mAuth.createUserWithEmailAndPassword(email, password)
+                .addOnCompleteListener(this, task -> {
+                    if (task.isSuccessful()) {
+                        // User created successfully, now save to database
+                        String userId = mAuth.getCurrentUser().getUid();
+                        saveCommuterToDatabase(userId, name, surname, email, gender);
+                    } else {
+                        // Registration failed
+                        btnRegister.setEnabled(true);
+                        btnRegister.setText("Register");
+                        Toast.makeText(RegisterCommuterActivity.this, 
+                                "Registration failed: " + task.getException().getMessage(), 
+                                Toast.LENGTH_LONG).show();
+                    }
+                });
+    }
+
+    private void saveCommuterToDatabase(String userId, String name, String surname, 
+                                      String email, String gender) {
+        Map<String, Object> commuterData = new HashMap<>();
+        commuterData.put("name", name);
+        commuterData.put("surname", surname);
+        commuterData.put("email", email);
+        commuterData.put("gender", gender);
+        commuterData.put("role", "commuter");
+
+        mDatabase.child("commuters").child(userId).setValue(commuterData)
+                .addOnCompleteListener(task -> {
+                    btnRegister.setEnabled(true);
+                    btnRegister.setText("Register");
+                    
+                    if (task.isSuccessful()) {
+                        Toast.makeText(RegisterCommuterActivity.this, 
+                                "Registration successful!", Toast.LENGTH_SHORT).show();
+                        
+                        // Navigate to HomeCommuterActivity
+                        Intent intent = new Intent(RegisterCommuterActivity.this, HomeCommuterActivity.class);
+                        startActivity(intent);
+                        finish();
+                    } else {
+                        Toast.makeText(RegisterCommuterActivity.this, 
+                                "Failed to save user data: " + task.getException().getMessage(), 
+                                Toast.LENGTH_LONG).show();
+                    }
+                });
+    }
+}
+
+================================================================================
+6. LOGIN FLOW
+================================================================================
+
+File: app/src/main/java/com/kodelink/glide/LoginActivity.java
+-----------------------------------------------------------
+package com.kodelink.glide;
+
+import android.content.Intent;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.text.TextUtils;
+import android.view.View;
+import android.widget.Toast;
+import androidx.activity.EdgeToEdge;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+
+public class LoginActivity extends BaseActivity {
+
+    private TextInputEditText etEmail;
+    private TextInputEditText etPassword;
+    private MaterialButton btnLogin;
+    private View tvForgotPassword;
+    private View tvRegisterLink;
+    private Toolbar toolbar;
+
+    private FirebaseAuth mAuth;
+    private DatabaseReference mDatabase;
+    private Handler suggestionHandler;
+    private boolean suggestionsEnabled = false;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        EdgeToEdge.enable(this);
+        setContentView(R.layout.activity_login);
+
+        // Initialize Firebase
+        mAuth = FirebaseAuth.getInstance();
+        mDatabase = FirebaseDatabase.getInstance().getReference();
+
+        // Setup Toolbar
+        setupToolbar();
+
+        // Initialize views
+        etEmail = findViewById(R.id.etEmail);
+        etPassword = findViewById(R.id.etPassword);
+        btnLogin = findViewById(R.id.btnLogin);
+        tvForgotPassword = findViewById(R.id.tvForgotPassword);
+        tvRegisterLink = findViewById(R.id.tvRegisterLink);
+
+        // Initialize suggestion handler
+        suggestionHandler = new Handler(Looper.getMainLooper());
+
+        // Setup long-press detection for input assistance
+        setupInputAssistance();
+        
+        // Setup touch detection to disable suggestions when tapping outside
+        setupTouchDetection();
+        
+        // Setup click listeners
+        setupClickListeners();
+    }
+
+    private void setupClickListeners() {
+        // Login button click
+        if (btnLogin != null) {
+            btnLogin.setOnClickListener(v -> loginUser());
+        }
+
+        // Forgot password click
+        if (tvForgotPassword != null) {
+            tvForgotPassword.setOnClickListener(v -> {
+                startActivity(new Intent(LoginActivity.this, ForgotPasswordActivity.class));
+            });
+        }
+
+        // Register link click
+        if (tvRegisterLink != null) {
+            tvRegisterLink.setOnClickListener(v -> {
+                startActivity(new Intent(LoginActivity.this, RoleSelectionActivity.class));
+            });
+        }
+    }
+
+    private void loginUser() {
+        String email = etEmail.getText().toString().trim();
+        String password = etPassword.getText().toString().trim();
+
+        if (TextUtils.isEmpty(email)) {
+            etEmail.setError("Email is required");
+            return;
+        }
+        if (TextUtils.isEmpty(password)) {
+            etPassword.setError("Password is required");
+            return;
+        }
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            etEmail.setError("Enter a valid email");
+            return;
+        }
+
+        btnLogin.setEnabled(false);
+        btnLogin.setText("Logging in...");
+
+        // Firebase Authentication
+        mAuth.signInWithEmailAndPassword(email, password)
+                .addOnCompleteListener(this, task -> {
+                    if (task.isSuccessful()) {
+                        // Login successful, check user role
+                        String userId = mAuth.getCurrentUser().getUid();
+                        checkUserRole(userId);
+                    } else {
+                        // Login failed
+                        btnLogin.setEnabled(true);
+                        btnLogin.setText("Login");
+                        Toast.makeText(LoginActivity.this, 
+                                "Login failed: " + task.getException().getMessage(), 
+                                Toast.LENGTH_LONG).show();
+                    }
+                });
+    }
+
+    private void checkUserRole(String userId) {
+        // Check if user is a commuter
+        mDatabase.child("commuters").child(userId).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    // User is a commuter
+                    btnLogin.setEnabled(true);
+                    btnLogin.setText("Login");
+                    Intent intent = new Intent(LoginActivity.this, HomeCommuterActivity.class);
+                    startActivity(intent);
+                    finish();
+                } else {
+                    // Check if user is a driver
+                    mDatabase.child("drivers").child(userId).addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(DataSnapshot dataSnapshot) {
+                            btnLogin.setEnabled(true);
+                            btnLogin.setText("Login");
+                            
+                            if (dataSnapshot.exists()) {
+                                // User is a driver
+                                Intent intent = new Intent(LoginActivity.this, DashboardDriverActivity.class);
+                                startActivity(intent);
+                                finish();
+                            } else {
+                                // User not found in either role
+                                Toast.makeText(LoginActivity.this, 
+                                        "User data not found. Please register again.", 
+                                        Toast.LENGTH_LONG).show();
+                                mAuth.signOut();
+                            }
+                        }
+
+                        @Override
+                        public void onCancelled(DatabaseError databaseError) {
+                            btnLogin.setEnabled(true);
+                            btnLogin.setText("Login");
+                            Toast.makeText(LoginActivity.this, 
+                                    "Database error: " + databaseError.getMessage(), 
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    });
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                btnLogin.setEnabled(true);
+                btnLogin.setText("Login");
+                Toast.makeText(LoginActivity.this, 
+                        "Database error: " + databaseError.getMessage(), 
+                        Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+}
+
+================================================================================
+7. PASSWORD RESET FLOW (LEGACY MOCK SYSTEM)
+================================================================================
+
+File: app/src/main/java/com/kodelink/glide/ForgotPasswordActivity.java
+--------------------------------------------------------------------
+package com.kodelink.glide;
+
+import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.View;
+import android.widget.EditText;
+import android.widget.Toast;
+import androidx.activity.EdgeToEdge;
+
+public class ForgotPasswordActivity extends BaseActivity {
+    private SharedPreferences prefs;
+    
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        EdgeToEdge.enable(this);
+        setContentView(R.layout.activity_forgot_password);
+
+        prefs = getSharedPreferences("MockAuth", MODE_PRIVATE);
+
+        View back = findViewById(R.id.btnBack);
+        if (back != null) back.setOnClickListener(v -> finish());
+
+        View submit = findViewById(R.id.btnSubmitReset);
+        if (submit != null) submit.setOnClickListener(v -> {
+            EditText input = findViewById(R.id.etPhone);
+            String phone = input != null ? input.getText().toString().trim() : "";
+            if (phone.isEmpty()) {
+                Toast.makeText(this, "Please enter phone number", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            // Simulate network delay
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                String storedPassword = prefs.getString(phone + "_password", "");
+                
+                if (storedPassword.isEmpty()) {
+                    Toast.makeText(this, "User not found", Toast.LENGTH_SHORT).show();
+                } else {
+                    // Mock: display the stored password directly
+                    Toast.makeText(this, "Password reset link sent (mock). Your password is: " + storedPassword, Toast.LENGTH_LONG).show();
+                    finish();
+                }
+            }, 1500);
+        });
+    }
+}
+
+================================================================================
+8. LEGACY MOCK AUTHENTICATION SYSTEM (DEPRECATED)
+================================================================================
+
+File: app/src/main/java/com/kodelink/glide/SignupActivity.java
+------------------------------------------------------------
+package com.kodelink.glide;
+
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.Spinner;
+import android.widget.Toast;
+import androidx.activity.EdgeToEdge;
+
+public class SignupActivity extends BaseActivity {
+
+    private EditText etName;
+    private EditText etPhone;
+    private EditText etPassword;
+    private Spinner spinnerRole;
+    private View btnCreateAccount;
+    private View btnBackToLogin;
+    private ImageView keyboardToggle;
+    private SharedPreferences prefs;
+    private InputMethodManager inputMethodManager;
+    private boolean isKeyboardVisible = false;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        EdgeToEdge.enable(this);
+        setContentView(R.layout.activity_signup);
+
+        etName = findViewById(R.id.etName);
+        etPhone = findViewById(R.id.etPhone);
+        etPassword = findViewById(R.id.etSignupPassword);
+        spinnerRole = findViewById(R.id.spinnerRole);
+        btnCreateAccount = findViewById(R.id.btnCreateAccount);
+        btnBackToLogin = findViewById(R.id.btnBackToLogin);
+        keyboardToggle = findViewById(R.id.keyboardToggle);
+
+        prefs = getSharedPreferences("MockAuth", MODE_PRIVATE);
+        inputMethodManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+
+        if (btnBackToLogin != null) btnBackToLogin.setOnClickListener(v -> finish());
+        if (btnCreateAccount != null) btnCreateAccount.setOnClickListener(v -> signupUser());
+        
+        setupKeyboardToggle();
+    }
+
+    private void signupUser() {
+        String name = etName != null ? etName.getText().toString().trim() : "";
+        String phone = etPhone != null ? etPhone.getText().toString().trim() : "";
+        String password = etPassword != null ? etPassword.getText().toString() : "";
+        String role = spinnerRole != null && spinnerRole.getSelectedItem() != null ? spinnerRole.getSelectedItem().toString().toLowerCase() : "";
+
+        if (name.isEmpty() || phone.isEmpty() || password.isEmpty() || role.isEmpty()) {
+            Toast.makeText(this, "Please fill required fields", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (password.length() < 6) {
+            Toast.makeText(this, "Password must be at least 6 characters", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        btnCreateAccount.setEnabled(false);
+        // Simulate network delay
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            // Check if phone already exists
+            if (prefs.contains(phone + "_password")) {
+                btnCreateAccount.setEnabled(true);
+                Toast.makeText(this, "Phone number already exists", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // Save user data to SharedPreferences using phone-based keys
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putString(phone + "_name", name);
+            editor.putString(phone + "_password", password);
+            editor.putString(phone + "_role", role);
+            editor.putString("current_user_phone", phone);
+            editor.apply();
+
+            btnCreateAccount.setEnabled(true);
+            Toast.makeText(this, "Account created successfully", Toast.LENGTH_SHORT).show();
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+        }, 1500);
+    }
+}
+
+================================================================================
+9. DATABASE STRUCTURE
+================================================================================
+
+Firebase Realtime Database Structure:
+------------------------------------
+{
+  "commuters": {
+    "userId1": {
+      "name": "John",
+      "surname": "Doe",
+      "email": "john@example.com",
+      "gender": "Male",
+      "role": "commuter"
+    },
+    "userId2": {
+      "name": "Jane",
+      "surname": "Smith",
+      "email": "jane@example.com",
+      "gender": "Female",
+      "role": "commuter"
+    }
+  },
+  "drivers": {
+    "userId3": {
+      "name": "Bob",
+      "surname": "Johnson",
+      "email": "bob@example.com",
+      "gender": "Male",
+      "vehicleType": "Sedan",
+      "vehiclePlate": "ABC123",
+      "role": "driver",
+      "rating": 0,
+      "completedRides": 0,
+      "availability": "offline"
+    }
+  },
+  "rideRequests": {
+    "rideId1": {
+      // Ride request data
+    }
+  }
+}
+
+================================================================================
+10. ANDROID MANIFEST CONFIGURATION
+================================================================================
+
+File: app/src/main/AndroidManifest.xml
+--------------------------------------
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Glide"
+        tools:targetApi="31">
+        
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyBt2-fYTHTDZYdXMQ7CH7Ho35To3h1OhuY"/>
+            
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        
+        <activity
+            android:name=".OnboardingActivity"
+            android:exported="false" />
+            
+        <activity
+            android:name=".LoginActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+            
+        <activity
+            android:name=".RoleSelectionActivity"
+            android:exported="false" />
+            
+        <activity
+            android:name=".RegisterCommuterActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+            
+        <activity
+            android:name=".RegisterDriverActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+            
+        <activity
+            android:name=".SignupActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+            
+        <activity
+            android:name=".ForgotPasswordActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+            
+        <activity
+            android:name=".HomeCommuterActivity"
+            android:exported="false" />
+            
+        <activity
+            android:name=".DashboardDriverActivity"
+            android:exported="false" />
+    </application>
+</manifest>
+
+================================================================================
+11. AUTHENTICATION FLOW DIAGRAM
+================================================================================
+
+CURRENT FLOW (Firebase System):
+-------------------------------
+1. App Launch → MainActivity (Splash) → OnboardingActivity
+2. OnboardingActivity → LoginActivity
+3. LoginActivity → RoleSelectionActivity (for new users)
+4. RoleSelectionActivity → RegisterDriverActivity OR RegisterCommuterActivity
+5. Registration → Firebase Auth + Database → DashboardDriverActivity OR HomeCommuterActivity
+6. Login → Firebase Auth → Role Check → DashboardDriverActivity OR HomeCommuterActivity
+
+LEGACY FLOW (Mock System - DEPRECATED):
+---------------------------------------
+1. LoginActivity → SignupActivity (phone-based)
+2. SignupActivity → SharedPreferences storage → LoginActivity
+3. LoginActivity → Mock validation → ProfileCommuterActivity OR ProfileDriverActivity
+
+================================================================================
+12. SECURITY CONCERNS & ISSUES
+================================================================================
+
+CRITICAL ISSUES:
+----------------
+1. Dual authentication systems causing confusion
+2. Mock password reset exposes actual passwords
+3. No session management or AuthStateListener
+4. No authentication guards on protected activities
+5. No logout functionality implemented
+6. No input sanitization for database operations
+
+MODERATE ISSUES:
+----------------
+1. Generic error messages exposing technical details
+2. No network connectivity checks
+3. No retry mechanisms for failed operations
+4. Inconsistent validation across activities
+5. Missing null checks in some places
+
+================================================================================
+13. RECOMMENDED FIXES
+================================================================================
+
+IMMEDIATE ACTIONS:
+------------------
+1. Remove SignupActivity and ForgotPasswordActivity (mock system)
+2. Implement AuthStateListener for session management
+3. Add authentication guards to protected activities
+4. Implement proper logout functionality
+5. Add Firebase Security Rules for database
+
+CODE IMPROVEMENTS:
+------------------
+1. Create AuthManager class for centralized authentication
+2. Implement proper error handling with user-friendly messages
+3. Add network connectivity checks
+4. Standardize validation across all activities
+5. Add proper logging and debugging
+
+================================================================================
+END OF AUTHENTICATION DOCUMENTATION
+================================================================================

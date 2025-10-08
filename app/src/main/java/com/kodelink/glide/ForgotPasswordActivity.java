@@ -1,18 +1,21 @@
 package com.kodelink.glide;
 
-import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
+import android.text.TextUtils;
 import android.view.View;
-import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
-import androidx.appcompat.app.AppCompatActivity;
 
-public class ForgotPasswordActivity extends AppCompatActivity {
-    private SharedPreferences prefs;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.auth.FirebaseAuth;
+
+public class ForgotPasswordActivity extends BaseActivity {
+    
+    private TextInputEditText etEmail;
+    private MaterialButton btnSubmitReset;
+    private FirebaseAuth mAuth;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -20,32 +23,73 @@ public class ForgotPasswordActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_forgot_password);
 
-        prefs = getSharedPreferences("MockAuth", MODE_PRIVATE);
+        // Initialize Firebase
+        mAuth = FirebaseAuth.getInstance();
 
-        View back = findViewById(R.id.btnBack);
-        if (back != null) back.setOnClickListener(v -> finish());
+        // Initialize views
+        etEmail = findViewById(R.id.etEmail);
+        btnSubmitReset = findViewById(R.id.btnSubmitReset);
 
-        View submit = findViewById(R.id.btnSubmitReset);
-        if (submit != null) submit.setOnClickListener(v -> {
-            EditText input = findViewById(R.id.etPhone);
-            String phone = input != null ? input.getText().toString().trim() : "";
-            if (phone.isEmpty()) {
-                Toast.makeText(this, "Please enter phone number", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            // Simulate network delay
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                String storedPassword = prefs.getString(phone + "_password", "");
-                
-                if (storedPassword.isEmpty()) {
-                    Toast.makeText(this, "User not found", Toast.LENGTH_SHORT).show();
-                } else {
-                    // Mock: display the stored password directly
-                    Toast.makeText(this, "Password reset link sent (mock). Your password is: " + storedPassword, Toast.LENGTH_LONG).show();
-                    finish();
-                }
-            }, 1500);
-        });
+        // Setup click listeners
+        btnSubmitReset.setOnClickListener(v -> resetPassword());
+    }
+
+
+    private void resetPassword() {
+        String email = etEmail.getText().toString().trim();
+
+        if (TextUtils.isEmpty(email)) {
+            etEmail.setError("Email is required");
+            etEmail.requestFocus();
+            return;
+        }
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            etEmail.setError("Enter a valid email address");
+            etEmail.requestFocus();
+            return;
+        }
+
+        // Disable button and show loading state
+        btnSubmitReset.setEnabled(false);
+        btnSubmitReset.setText("Sending...");
+
+        // Send password reset email
+        mAuth.sendPasswordResetEmail(email)
+                .addOnCompleteListener(task -> {
+                    // Restore button state
+                    btnSubmitReset.setEnabled(true);
+                    btnSubmitReset.setText("Send Reset Email");
+                    
+                    if (task.isSuccessful()) {
+                        Toast.makeText(ForgotPasswordActivity.this, 
+                                "Password reset email sent to " + email, 
+                                Toast.LENGTH_LONG).show();
+                        finish();
+                    } else {
+                        // Show user-friendly error message
+                        String errorMessage = getFirebaseErrorMessage(task.getException());
+                        Toast.makeText(ForgotPasswordActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+                    }
+                });
+    }
+
+    private String getFirebaseErrorMessage(Exception exception) {
+        if (exception == null) return "An unknown error occurred";
+        
+        String errorCode = exception.getMessage();
+        if (errorCode == null) return "An unknown error occurred";
+        
+        if (errorCode.contains("user-not-found")) {
+            return "No account found with this email address. Please check your email or register.";
+        } else if (errorCode.contains("invalid-email")) {
+            return "Please enter a valid email address.";
+        } else if (errorCode.contains("too-many-requests")) {
+            return "Too many requests. Please try again later.";
+        } else if (errorCode.contains("network-request-failed")) {
+            return "Network error. Please check your internet connection and try again.";
+        } else {
+            return "Failed to send reset email. Please try again.";
+        }
     }
 }
 
