@@ -15,6 +15,10 @@ import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.view.animation.Animation;
+import android.view.animation.TranslateAnimation;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -85,6 +89,17 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private MaterialCardView driverInfoCard;
     private Driver selectedDriver;
     private CustomInfoWindowAdapter infoWindowAdapter;
+    
+    // Driver selection card variables
+    private FrameLayout driverCardContainer;
+    private View overlayBackground;
+    private MaterialCardView driverSelectionCard;
+    private TextView tvETA;
+    private TextView tvDriverName;
+    private TextView tvVehicleInfo;
+    private TextView tvDriverRating;
+    private MaterialButton btnRequestRide;
+    private ImageView btnCloseCard;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -99,6 +114,17 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         rvSuggestions = findViewById(R.id.rvSuggestions);
         drawerLayout = findViewById(R.id.drawerLayout);
         navigationView = findViewById(R.id.navigationView);
+        
+        // Initialize driver card views
+        driverCardContainer = findViewById(R.id.driverCardContainer);
+        overlayBackground = findViewById(R.id.overlayBackground);
+        driverSelectionCard = findViewById(R.id.driverSelectionCard);
+        tvETA = findViewById(R.id.tvETA);
+        tvDriverName = findViewById(R.id.tvDriverName);
+        tvVehicleInfo = findViewById(R.id.tvVehicleInfo);
+        tvDriverRating = findViewById(R.id.tvDriverRating);
+        btnRequestRide = findViewById(R.id.btnRequestRide);
+        btnCloseCard = findViewById(R.id.btnCloseCard);
 
         // Initialize preferences
         prefs = getSharedPreferences("MockAuth", MODE_PRIVATE);
@@ -133,6 +159,10 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         btnMenu.setOnClickListener(v -> {
             drawerLayout.openDrawer(GravityCompat.START);
         });
+        
+        // Set up driver card listeners
+        setupDriverCardListeners();
+        
 
         // Set up search functionality
         setupSearchFunctionality();
@@ -164,10 +194,15 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         
         // Set up marker click listener for driver selection
         googleMap.setOnMarkerClickListener(marker -> {
+            Log.d("DriverCard", "Marker clicked: " + marker.getTitle());
+            Log.d("DriverCard", "Marker tag: " + marker.getTag());
             if (marker.getTag() != null && marker.getTag() instanceof Driver) {
-                selectedDriver = (Driver) marker.getTag();
-                // Show custom info window instead of automatically requesting ride
-                marker.showInfoWindow();
+                Driver driver = (Driver) marker.getTag();
+                Log.d("DriverCard", "Driver found: " + driver.name);
+                // Show driver selection card
+                showDriverCard(driver);
+            } else {
+                Log.d("DriverCard", "Marker tag is not a Driver object");
             }
             return true;
         });
@@ -414,6 +449,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     }
 
     private void displayDriverMarkers() {
+        Log.d("DriverCard", "displayDriverMarkers called with " + availableDrivers.size() + " drivers");
         for (Driver driver : availableDrivers) {
             if (driver.currentLocation != null) {
                 LatLng driverLocation = new LatLng(driver.currentLocation.lat, driver.currentLocation.lng);
@@ -426,8 +462,12 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                 // Set driver object as tag for click handling
                 driverMarker.setTag(driver);
                 driverMarkers.add(driverMarker);
+                Log.d("DriverCard", "Added driver marker for: " + driver.name + " at " + driverLocation);
+            } else {
+                Log.d("DriverCard", "Driver " + driver.name + " has no location data");
             }
         }
+        Log.d("DriverCard", "Total driver markers created: " + driverMarkers.size());
     }
 
     private void showDriverInfoCard(Driver driver) {
@@ -472,6 +512,11 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
 
     private void requestRide(Driver driver) {
         Log.d("RideRequest", "requestRide called for driver: " + driver.name);
+        
+        // Hide the driver card if it's visible
+        if (driverCardContainer.getVisibility() == View.VISIBLE) {
+            hideDriverCard();
+        }
         
         if (currentLocation == null || destinationLocation == null) {
             Toast.makeText(this, "Please set your destination first", Toast.LENGTH_SHORT).show();
@@ -952,5 +997,111 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                 Log.e("HomeCommuterActivity", "Failed to create commuter profile: " + error);
             }
         });
+    }
+    
+    // Test method for debugging driver card
+    private void testDriverCard() {
+        // Create a test driver after a delay to ensure everything is initialized
+        new android.os.Handler().postDelayed(() -> {
+            if (availableDrivers.isEmpty()) {
+                // Create a test driver if no drivers are available
+                Driver testDriver = new Driver("test_driver", "Test Driver", "1234567890", 
+                    new Driver.LocationData(-26.2041, 28.0473, "Test Location"), 4.5, 100, "available");
+                testDriver.vehicleModel = "Test Car";
+                testDriver.licensePlate = "TEST-123";
+                
+                Log.d("DriverCard", "Testing driver card with test driver");
+                showDriverCard(testDriver);
+            }
+        }, 3000); // 3 second delay
+    }
+    
+    // Driver Card Methods
+    private void setupDriverCardListeners() {
+        Log.d("DriverCard", "setupDriverCardListeners called");
+        Log.d("DriverCard", "driverCardContainer: " + (driverCardContainer != null ? "not null" : "null"));
+        Log.d("DriverCard", "overlayBackground: " + (overlayBackground != null ? "not null" : "null"));
+        Log.d("DriverCard", "driverSelectionCard: " + (driverSelectionCard != null ? "not null" : "null"));
+        Log.d("DriverCard", "btnCloseCard: " + (btnCloseCard != null ? "not null" : "null"));
+        Log.d("DriverCard", "btnRequestRide: " + (btnRequestRide != null ? "not null" : "null"));
+        
+        // Close card when overlay is clicked
+        overlayBackground.setOnClickListener(v -> hideDriverCard());
+        
+        // Close card when close button is clicked
+        btnCloseCard.setOnClickListener(v -> hideDriverCard());
+        
+        // Request ride button
+        btnRequestRide.setOnClickListener(v -> {
+            if (selectedDriver != null) {
+                requestRide(selectedDriver);
+            }
+        });
+    }
+    
+    private void showDriverCard(Driver driver) {
+        Log.d("DriverCard", "showDriverCard called for: " + driver.name);
+        selectedDriver = driver;
+        
+        // Update card content
+        tvDriverName.setText(driver.name);
+        tvVehicleInfo.setText(driver.vehicleModel + " • " + driver.licensePlate);
+        tvDriverRating.setText(String.valueOf(driver.rating));
+        
+        // Calculate ETA (mock calculation)
+        int etaMinutes = calculateETA(driver);
+        tvETA.setText(etaMinutes + " min");
+        
+        Log.d("DriverCard", "Card container visibility before: " + driverCardContainer.getVisibility());
+        Log.d("DriverCard", "Card visibility before: " + driverSelectionCard.getVisibility());
+        
+        // Show the card with animation
+        driverCardContainer.setVisibility(View.VISIBLE);
+        driverSelectionCard.setVisibility(View.VISIBLE);
+        
+        Log.d("DriverCard", "Card container visibility after: " + driverCardContainer.getVisibility());
+        Log.d("DriverCard", "Card visibility after: " + driverSelectionCard.getVisibility());
+        
+        // Simple slide up animation
+        driverSelectionCard.setTranslationY(1000); // Start from bottom
+        driverSelectionCard.animate()
+                .translationY(0)
+                .setDuration(300)
+                .setInterpolator(new android.view.animation.DecelerateInterpolator())
+                .start();
+    }
+    
+    private void hideDriverCard() {
+        Log.d("DriverCard", "hideDriverCard called");
+        // Animate slide down
+        driverSelectionCard.animate()
+                .translationY(driverSelectionCard.getMeasuredHeight())
+                .setDuration(300)
+                .setInterpolator(new android.view.animation.AccelerateInterpolator())
+                .withEndAction(() -> {
+                    driverCardContainer.setVisibility(View.GONE);
+                    driverSelectionCard.setVisibility(View.GONE);
+                    selectedDriver = null;
+                    Log.d("DriverCard", "Card hidden");
+                })
+                .start();
+    }
+    
+    private int calculateETA(Driver driver) {
+        // Mock ETA calculation - in real app, this would use actual distance/time
+        return 5 + (int)(Math.random() * 10); // 5-15 minutes
+    }
+    
+    
+    @Override
+    public void onBackPressed() {
+        // Close driver card if it's visible
+        if (driverCardContainer.getVisibility() == View.VISIBLE) {
+            hideDriverCard();
+        } else if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            drawerLayout.closeDrawer(GravityCompat.START);
+        } else {
+            super.onBackPressed();
+        }
     }
 }

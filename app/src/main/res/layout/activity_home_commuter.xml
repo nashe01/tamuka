@@ -112,6 +112,31 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <!-- Driver Selection Card Overlay -->
+    <FrameLayout
+        android:id="@+id/driverCardContainer"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Semi-transparent overlay -->
+        <View
+            android:id="@+id/overlayBackground"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#80000000"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <!-- Driver Selection Card -->
+        <include layout="@layout/driver_selection_card" />
+
+    </FrameLayout>
+
 </androidx.constraintlayout.widget.ConstraintLayout>
 
 <!-- Navigation Drawer -->
