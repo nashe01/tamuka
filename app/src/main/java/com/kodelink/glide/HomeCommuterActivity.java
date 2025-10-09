@@ -2,6 +2,7 @@ package com.kodelink.glide;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -45,6 +46,7 @@ import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
+import com.google.firebase.auth.FirebaseAuth;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -304,6 +306,8 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
             Toast.makeText(this, "Notifications clicked", Toast.LENGTH_SHORT).show();
         } else if (id == R.id.nav_settings) {
             Toast.makeText(this, "Settings clicked", Toast.LENGTH_SHORT).show();
+        } else if (id == R.id.nav_logout) {
+            logout();
         }
         
         drawerLayout.closeDrawer(GravityCompat.START);
@@ -318,6 +322,20 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         if (tvUserRole != null) {
             tvUserRole.setText(role.equals("driver") ? "Driver" : "Commuter");
         }
+    }
+
+    private void logout() {
+        // Clear SharedPreferences
+        prefs.edit().clear().apply();
+        
+        // Sign out from Firebase Auth if using Firebase
+        FirebaseAuth.getInstance().signOut();
+        
+        // Navigate to login screen
+        Intent intent = new Intent(HomeCommuterActivity.this, LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
     }
 
     // Map long click listener for destination selection

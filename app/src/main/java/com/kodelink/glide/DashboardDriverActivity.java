@@ -1,6 +1,7 @@
 package com.kodelink.glide;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
@@ -29,6 +30,7 @@ import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.switchmaterial.SwitchMaterial;
+import com.google.firebase.auth.FirebaseAuth;
 
 import java.util.List;
 
@@ -256,6 +258,8 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
             Toast.makeText(this, "Notifications clicked", Toast.LENGTH_SHORT).show();
         } else if (id == R.id.nav_settings) {
             Toast.makeText(this, "Settings clicked", Toast.LENGTH_SHORT).show();
+        } else if (id == R.id.nav_logout) {
+            logout();
         }
         
         drawerLayout.closeDrawer(GravityCompat.START);
@@ -271,6 +275,22 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
         if (tvUserRole != null) {
             tvUserRole.setText(role.equals("driver") ? "Driver" : "Commuter");
         }
+    }
+
+    private void logout() {
+        // Clear SharedPreferences
+        prefs.edit().clear().apply();
+        SharedPreferences authPrefs = getSharedPreferences("MockAuth", MODE_PRIVATE);
+        authPrefs.edit().clear().apply();
+        
+        // Sign out from Firebase Auth if using Firebase
+        FirebaseAuth.getInstance().signOut();
+        
+        // Navigate to login screen
+        Intent intent = new Intent(DashboardDriverActivity.this, LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
     }
     
     private void setupRideRequestListening() {
