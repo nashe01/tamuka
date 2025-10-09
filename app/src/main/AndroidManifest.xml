@@ -33,19 +33,31 @@
             android:exported="false" />
         <activity
             android:name=".LoginActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity
+            android:name=".RoleSelectionActivity"
             android:exported="false" />
         <activity
-            android:name=".SignupActivity"
-            android:exported="false" />
+            android:name=".RegisterCommuterActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustNothing|stateHidden" />
+        <activity
+            android:name=".RegisterDriverActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
         <activity
             android:name=".ForgotPasswordActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:windowSoftInputMode="adjustNothing|stateHidden" />
         <activity
             android:name=".ProfileCommuterActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:windowSoftInputMode="adjustNothing|stateHidden" />
         <activity
             android:name=".ProfileDriverActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
         <activity
             android:name=".HomeCommuterActivity"
             android:exported="false" />

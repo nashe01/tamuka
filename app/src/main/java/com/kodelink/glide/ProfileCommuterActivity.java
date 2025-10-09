@@ -9,9 +9,8 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
-import androidx.appcompat.app.AppCompatActivity;
 
-public class ProfileCommuterActivity extends AppCompatActivity {
+public class ProfileCommuterActivity extends BaseActivity {
 
     private EditText etName;
     private EditText etPhone;
