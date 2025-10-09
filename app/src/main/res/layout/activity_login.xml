@@ -19,7 +19,8 @@
     <androidx.constraintlayout.widget.ConstraintLayout
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
-      android:padding="32dp">
+      android:padding="32dp"
+      android:paddingTop="64dp">
 
       <!-- App Logo -->
       <ImageView
@@ -84,7 +85,7 @@
         <com.google.android.material.textfield.TextInputEditText
           android:id="@+id/etEmail"
           android:layout_width="match_parent"
-          android:layout_height="56dp"
+          android:layout_height="48dp"
           android:inputType="textEmailAddress"
           android:textSize="16sp"
           android:importantForAutofill="no"
@@ -119,7 +120,7 @@
         <com.google.android.material.textfield.TextInputEditText
           android:id="@+id/etPassword"
           android:layout_width="match_parent"
-          android:layout_height="56dp"
+          android:layout_height="48dp"
           android:inputType="textPassword"
           android:textSize="16sp"
           android:importantForAutofill="no"

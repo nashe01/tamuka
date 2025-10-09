@@ -1,8 +1,10 @@
 package com.kodelink.glide;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -15,6 +17,7 @@ public class ForgotPasswordActivity extends BaseActivity {
     
     private TextInputEditText etEmail;
     private MaterialButton btnSubmitReset;
+    private TextView tvBackToLogin;
     private FirebaseAuth mAuth;
     
     @Override
@@ -29,9 +32,14 @@ public class ForgotPasswordActivity extends BaseActivity {
         // Initialize views
         etEmail = findViewById(R.id.etEmail);
         btnSubmitReset = findViewById(R.id.btnSubmitReset);
+        tvBackToLogin = findViewById(R.id.tvBackToLogin);
 
         // Setup click listeners
         btnSubmitReset.setOnClickListener(v -> resetPassword());
+        tvBackToLogin.setOnClickListener(v -> {
+            startActivity(new Intent(ForgotPasswordActivity.this, LoginActivity.class));
+            finish();
+        });
     }
 
 
