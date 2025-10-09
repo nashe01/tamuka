@@ -38,12 +38,20 @@ public class MainActivity extends AppCompatActivity {
         mFirestore = FirebaseFirestore.getInstance();
 
         // Check authentication immediately without delay for logged-in users
-        FirebaseUser currentUser = mAuth.getCurrentUser();
-        if (currentUser != null) {
-            // User is already logged in - check role and navigate directly
-            checkUserRoleAndNavigate(currentUser.getUid());
-        } else {
-            // Not logged in - show splash for a moment then go to onboarding
+        try {
+            FirebaseUser currentUser = mAuth.getCurrentUser();
+            if (currentUser != null) {
+                // User is already logged in - check role and navigate directly
+                checkUserRoleAndNavigate(currentUser.getUid());
+            } else {
+                // Not logged in - show splash for a moment then go to onboarding
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    navigateToOnboarding();
+                }, 1000);
+            }
+        } catch (Exception e) {
+            // If there's any error with authentication, go to onboarding
+            Toast.makeText(this, "Authentication error, please login again", Toast.LENGTH_SHORT).show();
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
                 navigateToOnboarding();
             }, 1000);
@@ -51,39 +59,53 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void checkUserRoleAndNavigate(String userId) {
-        // Check user role in Firestore
-        mFirestore.collection("users").document(userId).get()
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        DocumentSnapshot document = task.getResult();
-                        if (document.exists()) {
-                            String role = document.getString("role");
-                            if ("commuter".equals(role)) {
-                                // User is a commuter - navigate directly to commuter home
-                                Intent intent = new Intent(MainActivity.this, HomeCommuterActivity.class);
-                                startActivity(intent);
-                                finish();
-                            } else if ("driver".equals(role)) {
-                                // User is a driver - navigate directly to driver dashboard
-                                Intent intent = new Intent(MainActivity.this, DashboardDriverActivity.class);
-                                startActivity(intent);
-                                finish();
+        try {
+            // Check user role in Firestore
+            mFirestore.collection("users").document(userId).get()
+                    .addOnCompleteListener(task -> {
+                        try {
+                            if (task.isSuccessful()) {
+                                DocumentSnapshot document = task.getResult();
+                                if (document.exists()) {
+                                    String role = document.getString("role");
+                                    if ("commuter".equals(role)) {
+                                        // User is a commuter - navigate directly to commuter home
+                                        Intent intent = new Intent(MainActivity.this, HomeCommuterActivity.class);
+                                        startActivity(intent);
+                                        finish();
+                                    } else if ("driver".equals(role)) {
+                                        // User is a driver - navigate directly to driver dashboard
+                                        Intent intent = new Intent(MainActivity.this, DashboardDriverActivity.class);
+                                        startActivity(intent);
+                                        finish();
+                                    } else {
+                                        // Invalid role - sign out and go to onboarding
+                                        mAuth.signOut();
+                                        navigateToOnboarding();
+                                    }
+                                } else {
+                                    // User document not found - sign out and go to onboarding
+                                    mAuth.signOut();
+                                    navigateToOnboarding();
+                                }
                             } else {
-                                // Invalid role - sign out and go to onboarding
+                                // Firestore error - sign out and go to onboarding
                                 mAuth.signOut();
                                 navigateToOnboarding();
                             }
-                        } else {
-                            // User document not found - sign out and go to onboarding
+                        } catch (Exception e) {
+                            // If there's any error during navigation, go to onboarding
+                            Toast.makeText(MainActivity.this, "Navigation error, please login again", Toast.LENGTH_SHORT).show();
                             mAuth.signOut();
                             navigateToOnboarding();
                         }
-                    } else {
-                        // Firestore error - sign out and go to onboarding
-                        mAuth.signOut();
-                        navigateToOnboarding();
-                    }
-                });
+                    });
+        } catch (Exception e) {
+            // If there's any error with the role check, go to onboarding
+            Toast.makeText(this, "Role check error, please login again", Toast.LENGTH_SHORT).show();
+            mAuth.signOut();
+            navigateToOnboarding();
+        }
     }
 
     private void navigateToOnboarding() {
