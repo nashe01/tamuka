@@ -61,8 +61,7 @@ public class LoginActivity extends BaseActivity {
         // Setup click listeners
         setupClickListeners();
         
-        // Setup AuthStateListener
-        setupAuthStateListener();
+        // AuthStateListener removed to prevent double navigation
     }
 
 
@@ -161,29 +160,7 @@ public class LoginActivity extends BaseActivity {
         suggestionHandler.removeCallbacksAndMessages(null);
     }
 
-    private void setupAuthStateListener() {
-        mAuthStateListener = firebaseAuth -> {
-            FirebaseUser user = firebaseAuth.getCurrentUser();
-            if (user != null) {
-                // User is signed in, check role and navigate accordingly
-                checkUserRole(user.getUid());
-            }
-        };
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        mAuth.addAuthStateListener(mAuthStateListener);
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        if (mAuthStateListener != null) {
-            mAuth.removeAuthStateListener(mAuthStateListener);
-        }
-    }
+    // Removed AuthStateListener to prevent double navigation after login
 
     @Override
     protected void onDestroy() {
@@ -240,10 +217,6 @@ public class LoginActivity extends BaseActivity {
         // Check user role in Firestore
         mFirestore.collection("users").document(userId).get()
                 .addOnCompleteListener(task -> {
-                    // Restore button state
-                    btnLogin.setEnabled(true);
-                    btnLogin.setText("Login");
-                    
                     if (task.isSuccessful()) {
                         DocumentSnapshot document = task.getResult();
                         if (document.exists()) {
@@ -259,21 +232,27 @@ public class LoginActivity extends BaseActivity {
                                 startActivity(intent);
                                 finish();
                             } else {
-                                // Invalid role
+                                // Invalid role - restore button state and show error
+                                btnLogin.setEnabled(true);
+                                btnLogin.setText("Login");
                                 Toast.makeText(LoginActivity.this, 
                                         "Invalid user role. Please contact support.", 
                                         Toast.LENGTH_LONG).show();
                                 mAuth.signOut();
                             }
                         } else {
-                            // User document not found
+                            // User document not found - restore button state and show error
+                            btnLogin.setEnabled(true);
+                            btnLogin.setText("Login");
                             Toast.makeText(LoginActivity.this, 
                                     "User data not found. Please register again.", 
                                     Toast.LENGTH_LONG).show();
                             mAuth.signOut();
                         }
                     } else {
-                        // Firestore error
+                        // Firestore error - restore button state and show error
+                        btnLogin.setEnabled(true);
+                        btnLogin.setText("Login");
                         Toast.makeText(LoginActivity.this, 
                                 "Failed to verify user data. Please try again.", 
                                 Toast.LENGTH_LONG).show();

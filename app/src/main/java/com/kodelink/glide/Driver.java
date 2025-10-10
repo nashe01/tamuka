@@ -2,32 +2,28 @@ package com.kodelink.glide;
 
 public class Driver {
     public String driverId;
+    public String uid; // Firebase Auth UID
     public String name;
-    public String phone;
+    public String gender;
     public LocationData currentLocation;
+    public String status; // available, unavailable
     public double rating;
     public int completedRides;
-    public String availability; // available, offline
-    public String assignedRideId;
-    public String vehicleModel;
-    public String licensePlate;
 
     public Driver() {
         // Default constructor required for Firebase
     }
 
-    public Driver(String driverId, String name, String phone, LocationData currentLocation, 
-                  double rating, int completedRides, String availability) {
+    public Driver(String driverId, String uid, String name, String gender, LocationData currentLocation, 
+                  String status, double rating, int completedRides) {
         this.driverId = driverId;
+        this.uid = uid;
         this.name = name;
-        this.phone = phone;
+        this.gender = gender;
         this.currentLocation = currentLocation;
+        this.status = status;
         this.rating = rating;
         this.completedRides = completedRides;
-        this.availability = availability;
-        this.assignedRideId = null;
-        this.vehicleModel = "Toyota Camry"; // Default vehicle
-        this.licensePlate = "ABC-123"; // Default license plate
     }
 
     public static class LocationData {
