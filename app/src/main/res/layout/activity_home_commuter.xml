@@ -353,23 +353,26 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="1"
-                        app:boxBackgroundColor="@color/gray_100"
-                        app:boxCornerRadiusTopStart="8dp"
-                        app:boxCornerRadiusTopEnd="8dp"
-                        app:boxCornerRadiusBottomStart="8dp"
-                        app:boxCornerRadiusBottomEnd="8dp"
+                        app:boxBackgroundMode="outline"
+                        app:boxCornerRadiusTopStart="25dp"
+                        app:boxCornerRadiusTopEnd="25dp"
+                        app:boxCornerRadiusBottomStart="25dp"
+                        app:boxCornerRadiusBottomEnd="25dp"
                         app:boxStrokeColor="@color/purple_500"
-                        app:boxStrokeWidth="1dp"
-                        app:boxStrokeWidthFocused="2dp">
+                        app:boxStrokeWidth="2dp"
+                        app:hintTextColor="@color/purple_500">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etNumberOfPeople"
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
+                            android:layout_height="48dp"
                             android:inputType="number"
                             android:text="1"
                             android:textSize="16sp"
                             android:textColor="@color/black"
+                            android:gravity="center_vertical"
+                            android:paddingStart="20dp"
+                            android:paddingEnd="20dp"
                             android:background="@null" />
 
                     </com.google.android.material.textfield.TextInputLayout>
@@ -396,23 +399,26 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="5.00"
-                        app:boxBackgroundColor="@color/gray_100"
-                        app:boxCornerRadiusTopStart="8dp"
-                        app:boxCornerRadiusTopEnd="8dp"
-                        app:boxCornerRadiusBottomStart="8dp"
-                        app:boxCornerRadiusBottomEnd="8dp"
+                        app:boxBackgroundMode="outline"
+                        app:boxCornerRadiusTopStart="25dp"
+                        app:boxCornerRadiusTopEnd="25dp"
+                        app:boxCornerRadiusBottomStart="25dp"
+                        app:boxCornerRadiusBottomEnd="25dp"
                         app:boxStrokeColor="@color/purple_500"
-                        app:boxStrokeWidth="1dp"
-                        app:boxStrokeWidthFocused="2dp">
+                        app:boxStrokeWidth="2dp"
+                        app:hintTextColor="@color/purple_500">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etPricePerPerson"
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
+                            android:layout_height="48dp"
                             android:inputType="numberDecimal"
                             android:text="5.00"
                             android:textSize="16sp"
                             android:textColor="@color/black"
+                            android:gravity="center_vertical"
+                            android:paddingStart="20dp"
+                            android:paddingEnd="20dp"
                             android:background="@null" />
 
                     </com.google.android.material.textfield.TextInputLayout>
