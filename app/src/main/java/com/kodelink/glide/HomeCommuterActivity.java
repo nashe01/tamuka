@@ -19,6 +19,7 @@ import android.widget.Button;
 import android.widget.RatingBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import com.google.android.material.textfield.TextInputEditText;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -114,6 +115,8 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private TextView tvVehicleInfo;
     private Button btnCancel;
     private Button btnRequestRide;
+    private TextInputEditText etNumberOfPeople;
+    private TextInputEditText etPricePerPerson;
     private Animation slideUpAnimation;
     private Animation slideDownAnimation;
 
@@ -696,18 +699,50 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
             return;
         }
         
+        // Get and validate input values
+        int numberOfPeople = 1;
+        double pricePerPerson = 5.0;
+        
+        try {
+            String peopleText = etNumberOfPeople.getText().toString().trim();
+            if (!peopleText.isEmpty()) {
+                numberOfPeople = Integer.parseInt(peopleText);
+                if (numberOfPeople < 1 || numberOfPeople > 8) {
+                    Toast.makeText(this, "Number of people must be between 1 and 8", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            }
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, "Please enter a valid number of people", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        try {
+            String priceText = etPricePerPerson.getText().toString().trim();
+            if (!priceText.isEmpty()) {
+                pricePerPerson = Double.parseDouble(priceText);
+                if (pricePerPerson < 0.01) {
+                    Toast.makeText(this, "Price per person must be greater than $0.00", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            }
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, "Please enter a valid price per person", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
         // Show immediate feedback
         Toast.makeText(this, "Sending request to " + driver.name + "...", Toast.LENGTH_SHORT).show();
         
         // Hide the driver selection card
         hideDriverSelectionCard();
         
-        // Send ride request
-        requestRide(driver);
+        // Send ride request with people and price data
+        requestRide(driver, numberOfPeople, pricePerPerson);
     }
 
-    private void requestRide(Driver driver) {
-        Log.d("RideRequest", "requestRide called for driver: " + driver.name);
+    private void requestRide(Driver driver, int numberOfPeople, double pricePerPerson) {
+        Log.d("RideRequest", "requestRide called for driver: " + driver.name + " with " + numberOfPeople + " people at $" + pricePerPerson + " each");
         
         if (currentLocation == null || destinationLocation == null) {
             Toast.makeText(this, "Please set your destination first", Toast.LENGTH_SHORT).show();
@@ -743,8 +778,8 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                     driver.driverId,
                     pickupLocation,
                     destination,
-                    1, // Default to 1 person
-                    5.0 // Default price per person
+                    numberOfPeople,
+                    pricePerPerson
                 ).addOnSuccessListener(aVoid -> {
                     Log.d("RideRequest", "Ride request created successfully");
                     showRideRequestSentMessage(driver.name);
@@ -1212,6 +1247,8 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         tvVehicleInfo = driverSelectionCard.findViewById(R.id.tvVehicleInfo);
         btnCancel = driverSelectionCard.findViewById(R.id.btnCancel);
         btnRequestRide = driverSelectionCard.findViewById(R.id.btnRequestRide);
+        etNumberOfPeople = driverSelectionCard.findViewById(R.id.etNumberOfPeople);
+        etPricePerPerson = driverSelectionCard.findViewById(R.id.etPricePerPerson);
         
         // Initialize animations
         slideUpAnimation = AnimationUtils.loadAnimation(this, R.anim.slide_up);
@@ -1265,6 +1302,10 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         } else {
             tvDistance.setText("N/A");
         }
+        
+        // Reset input fields to default values
+        etNumberOfPeople.setText("1");
+        etPricePerPerson.setText("5.00");
         
         // Show card with animation
         driverSelectionCard.setVisibility(View.VISIBLE);

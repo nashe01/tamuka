@@ -7,6 +7,10 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -68,6 +72,17 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
     private LatLng currentLocation;
     private RideRequest currentRideRequest;
     private Polyline routeToPickup;
+    
+    // Ride request card variables
+    private View rideRequestCard;
+    private TextView tvRequestTime;
+    private TextView tvRequestDistance;
+    private TextView tvPickupLocation;
+    private TextView tvDestinationLocation;
+    private Button btnDeclineRide;
+    private Button btnAcceptRide;
+    private Animation slideUpAnimation;
+    private Animation slideDownAnimation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,6 +96,9 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
         tvAvailabilityStatus = findViewById(R.id.tvAvailabilityStatus);
         drawerLayout = findViewById(R.id.drawerLayout);
         navigationView = findViewById(R.id.navigationView);
+        
+        // Initialize ride request card
+        initializeRideRequestCard();
 
         // Initialize preferences
         prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
@@ -377,28 +395,13 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
     }
     
     private void showIncomingRideRequestDialog(RideRequest rideRequest) {
-        String message = "New ride request!\n\n" +
-                "Pickup: " + rideRequest.pickupLocation.address + "\n" +
-                "Destination: " + rideRequest.destination.address + "\n" +
-                "Distance: " + calculateDistance(
-                        new LatLng(rideRequest.pickupLocation.lat, rideRequest.pickupLocation.lng),
-                        currentLocation
-                ) + " km";
-        
-        new MaterialAlertDialogBuilder(this)
-                .setTitle("Incoming Ride Request")
-                .setMessage(message)
-                .setPositiveButton("Accept", (dialog, which) -> {
-                    acceptRideRequest(rideRequest);
-                })
-                .setNegativeButton("Decline", (dialog, which) -> {
-                    declineRideRequest(rideRequest);
-                })
-                .setCancelable(false)
-                .show();
+        showRideRequestCard(rideRequest);
     }
     
     private void acceptRideRequest(RideRequest rideRequest) {
+        // Hide the ride request card
+        hideRideRequestCard();
+        
         // Update ride request status to accepted in both databases
         firebaseService.updateRideRequestStatus(rideRequest.rideId, "accepted")
             .addOnSuccessListener(aVoid -> {
@@ -419,6 +422,9 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
     }
     
     private void declineRideRequest(RideRequest rideRequest) {
+        // Hide the ride request card
+        hideRideRequestCard();
+        
         // Update ride request status to declined in both databases
         firebaseService.updateRideRequestStatus(rideRequest.rideId, "declined")
             .addOnSuccessListener(aVoid -> {
@@ -671,4 +677,98 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
     
     // This method is no longer needed as driver profiles are created during registration
     // The driver profile should already exist in Firestore from the registration process
+    
+    /**
+     * Initialize the ride request card and its components
+     */
+    private void initializeRideRequestCard() {
+        rideRequestCard = findViewById(R.id.rideRequestCard);
+        
+        // Initialize card views
+        tvRequestTime = rideRequestCard.findViewById(R.id.tvRequestTime);
+        tvRequestDistance = rideRequestCard.findViewById(R.id.tvRequestDistance);
+        tvPickupLocation = rideRequestCard.findViewById(R.id.tvPickupLocation);
+        tvDestinationLocation = rideRequestCard.findViewById(R.id.tvDestinationLocation);
+        btnDeclineRide = rideRequestCard.findViewById(R.id.btnDeclineRide);
+        btnAcceptRide = rideRequestCard.findViewById(R.id.btnAcceptRide);
+        
+        // Initialize animations
+        slideUpAnimation = AnimationUtils.loadAnimation(this, R.anim.slide_up);
+        slideDownAnimation = AnimationUtils.loadAnimation(this, R.anim.slide_down);
+        
+        // Set up button listeners
+        btnDeclineRide.setOnClickListener(v -> {
+            if (currentRideRequest != null) {
+                declineRideRequest(currentRideRequest);
+            }
+        });
+        btnAcceptRide.setOnClickListener(v -> {
+            if (currentRideRequest != null) {
+                acceptRideRequest(currentRideRequest);
+            }
+        });
+        
+        // Set up slide down animation listener
+        slideDownAnimation.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {}
+            
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                rideRequestCard.setVisibility(View.GONE);
+            }
+            
+            @Override
+            public void onAnimationRepeat(Animation animation) {}
+        });
+        
+        // Initially hide the card
+        rideRequestCard.setVisibility(View.GONE);
+    }
+    
+    /**
+     * Show the ride request card with smooth slide up animation
+     */
+    private void showRideRequestCard(RideRequest rideRequest) {
+        if (rideRequest == null) return;
+        
+        // Populate card with ride request information
+        tvRequestTime.setText("Just now");
+        tvPickupLocation.setText(rideRequest.pickupLocation.address);
+        tvDestinationLocation.setText(rideRequest.destination.address);
+        
+        // Calculate and display distance
+        if (rideRequest.pickupLocation != null && currentLocation != null) {
+            double distance = calculateDistance(
+                new LatLng(rideRequest.pickupLocation.lat, rideRequest.pickupLocation.lng),
+                currentLocation
+            );
+            tvRequestDistance.setText(String.format("%.1f km", distance));
+        } else {
+            tvRequestDistance.setText("N/A");
+        }
+        
+        // Show card with animation
+        rideRequestCard.setVisibility(View.VISIBLE);
+        rideRequestCard.startAnimation(slideUpAnimation);
+    }
+    
+    /**
+     * Hide the ride request card with smooth slide down animation
+     */
+    private void hideRideRequestCard() {
+        if (rideRequestCard.getVisibility() == View.VISIBLE) {
+            rideRequestCard.startAnimation(slideDownAnimation);
+        }
+    }
+    
+    @Override
+    public void onBackPressed() {
+        // If ride request card is visible, hide it instead of closing activity
+        if (rideRequestCard != null && rideRequestCard.getVisibility() == View.VISIBLE) {
+            hideRideRequestCard();
+        } else {
+            super.onBackPressed();
+        }
+    }
 }

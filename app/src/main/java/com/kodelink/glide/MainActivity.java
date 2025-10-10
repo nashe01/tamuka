@@ -44,17 +44,13 @@ public class MainActivity extends AppCompatActivity {
                 // User is already logged in - check role and navigate directly
                 checkUserRoleAndNavigate(currentUser.getUid());
             } else {
-                // Not logged in - show splash for a moment then go to onboarding
-                new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                    navigateToOnboarding();
-                }, 1000);
+                // Not logged in - go to onboarding immediately
+                navigateToOnboarding();
             }
         } catch (Exception e) {
-            // If there's any error with authentication, go to onboarding
+            // If there's any error with authentication, go to onboarding immediately
             Toast.makeText(this, "Authentication error, please login again", Toast.LENGTH_SHORT).show();
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                navigateToOnboarding();
-            }, 1000);
+            navigateToOnboarding();
         }
     }
 
