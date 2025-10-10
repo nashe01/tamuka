@@ -9,6 +9,8 @@ public class Driver {
     public int completedRides;
     public String availability; // available, offline
     public String assignedRideId;
+    public String vehicleModel;
+    public String licensePlate;
 
     public Driver() {
         // Default constructor required for Firebase
@@ -24,6 +26,8 @@ public class Driver {
         this.completedRides = completedRides;
         this.availability = availability;
         this.assignedRideId = null;
+        this.vehicleModel = "Toyota Camry"; // Default vehicle
+        this.licensePlate = "ABC-123"; // Default license plate
     }
 
     public static class LocationData {
