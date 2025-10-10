@@ -33,6 +33,8 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.AutocompletePrediction;
 import com.google.android.libraries.places.api.model.AutocompleteSessionToken;
@@ -52,6 +54,16 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.HashMap;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class HomeCommuterActivity extends AppCompatActivity implements OnMapReadyCallback, NavigationView.OnNavigationItemSelectedListener, GoogleMap.OnMapLongClickListener {
 
@@ -78,6 +90,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private LatLng currentLocation;
     private LatLng destinationLocation;
     private Marker destinationMarker;
+    private Polyline routePolyline;
     private List<Driver> availableDrivers = new ArrayList<>();
     private List<Marker> driverMarkers = new ArrayList<>();
     private FirebaseService firebaseService;
@@ -383,10 +396,202 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                     new com.google.android.gms.maps.model.LatLngBounds(southwest, northeast), 100));
         }
         
+        // Draw route from current location to destination
+        if (currentLocation != null) {
+            drawRoute(currentLocation, destination);
+        }
+        
         // Show nearby drivers
         showNearbyDrivers();
         
         Toast.makeText(this, "Destination set! Looking for nearby drivers...", Toast.LENGTH_SHORT).show();
+    }
+
+    /**
+     * Draw route from origin to destination using Google Maps Directions API
+     */
+    private void drawRoute(LatLng origin, LatLng destination) {
+        // Remove existing route polyline
+        if (routePolyline != null) {
+            routePolyline.remove();
+        }
+        
+        // Get route from Google Maps Directions API
+        getRouteFromDirectionsAPI(origin, destination);
+    }
+    
+    /**
+     * Get route data from Google Maps Directions API
+     */
+    private void getRouteFromDirectionsAPI(LatLng origin, LatLng destination) {
+        String apiKey = "AIzaSyDc8_axTnQWPUiBWVgp1ifK0zV8Zy21Tqw";
+        String originStr = origin.latitude + "," + origin.longitude;
+        String destinationStr = destination.latitude + "," + destination.longitude;
+        
+        String url = "https://maps.googleapis.com/maps/api/directions/json?" +
+                "origin=" + originStr +
+                "&destination=" + destinationStr +
+                "&key=" + apiKey;
+        
+        Log.d("DirectionsAPI", "Requesting route: " + url);
+        
+        // Execute API call in background thread
+        new Thread(() -> {
+            try {
+                String response = makeHttpRequest(url);
+                runOnUiThread(() -> parseDirectionsResponse(response, origin, destination));
+            } catch (Exception e) {
+                Log.e("DirectionsAPI", "Error getting directions: " + e.getMessage());
+                runOnUiThread(() -> {
+                    // Fallback to straight line if API fails
+                    drawStraightLineRoute(origin, destination);
+                    Toast.makeText(this, "Could not get route details. Showing direct path.", Toast.LENGTH_SHORT).show();
+                });
+            }
+        }).start();
+    }
+    
+    /**
+     * Make HTTP request to Google Directions API
+     */
+    private String makeHttpRequest(String urlString) throws IOException {
+        URL url = new URL(urlString);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+        connection.setConnectTimeout(10000);
+        connection.setReadTimeout(10000);
+        
+        InputStream inputStream = connection.getInputStream();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+        StringBuilder response = new StringBuilder();
+        String line;
+        
+        while ((line = reader.readLine()) != null) {
+            response.append(line);
+        }
+        
+        reader.close();
+        inputStream.close();
+        connection.disconnect();
+        
+        return response.toString();
+    }
+    
+    /**
+     * Parse the Directions API response and draw the route
+     */
+    private void parseDirectionsResponse(String response, LatLng origin, LatLng destination) {
+        try {
+            JSONObject jsonResponse = new JSONObject(response);
+            String status = jsonResponse.getString("status");
+            
+            if (!status.equals("OK")) {
+                Log.e("DirectionsAPI", "Directions API error: " + status);
+                drawStraightLineRoute(origin, destination);
+                return;
+            }
+            
+            JSONArray routes = jsonResponse.getJSONArray("routes");
+            if (routes.length() == 0) {
+                Log.e("DirectionsAPI", "No routes found");
+                drawStraightLineRoute(origin, destination);
+                return;
+            }
+            
+            JSONObject route = routes.getJSONObject(0);
+            JSONArray legs = route.getJSONArray("legs");
+            JSONObject leg = legs.getJSONObject(0);
+            
+            // Extract distance and duration
+            JSONObject distance = leg.getJSONObject("distance");
+            JSONObject duration = leg.getJSONObject("duration");
+            
+            String distanceText = distance.getString("text");
+            String durationText = duration.getString("text");
+            
+            // Extract route points
+            JSONObject overviewPolyline = route.getJSONObject("overview_polyline");
+            String encodedPolyline = overviewPolyline.getString("points");
+            
+            // Decode polyline and draw route
+            List<LatLng> routePoints = decodePolyline(encodedPolyline);
+            drawRoutePolyline(routePoints);
+            
+            // Show route information
+            showRouteInfo(distanceText, durationText);
+            
+            Log.d("DirectionsAPI", "Route found: " + distanceText + ", " + durationText);
+            
+        } catch (JSONException e) {
+            Log.e("DirectionsAPI", "Error parsing directions response: " + e.getMessage());
+            drawStraightLineRoute(origin, destination);
+        }
+    }
+    
+    /**
+     * Decode Google's encoded polyline string
+     */
+    private List<LatLng> decodePolyline(String encoded) {
+        List<LatLng> poly = new ArrayList<>();
+        int index = 0, len = encoded.length();
+        int lat = 0, lng = 0;
+        
+        while (index < len) {
+            int b, shift = 0, result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lat += dlat;
+            
+            shift = 0;
+            result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lng += dlng;
+            
+            LatLng p = new LatLng(((double) lat / 1E5), ((double) lng / 1E5));
+            poly.add(p);
+        }
+        
+        return poly;
+    }
+    
+    /**
+     * Draw the route polyline on the map
+     */
+    private void drawRoutePolyline(List<LatLng> routePoints) {
+        if (routePoints.isEmpty()) return;
+        
+        routePolyline = googleMap.addPolyline(new PolylineOptions()
+                .addAll(routePoints)
+                .width(8)
+                .color(0xFF6200EE) // Primary color (purple)
+                .geodesic(true));
+    }
+    
+    /**
+     * Fallback method to draw straight line route
+     */
+    private void drawStraightLineRoute(LatLng origin, LatLng destination) {
+        List<LatLng> routePoints = new ArrayList<>();
+        routePoints.add(origin);
+        routePoints.add(destination);
+        drawRoutePolyline(routePoints);
+    }
+    
+    /**
+     * Show route information (distance and duration)
+     */
+    private void showRouteInfo(String distance, String duration) {
+        String routeInfo = "Route: " + distance + " • " + duration;
+        Toast.makeText(this, routeInfo, Toast.LENGTH_LONG).show();
     }
 
     private void showNearbyDrivers() {
@@ -766,6 +971,12 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
             destinationMarker = null;
         }
         
+        // Remove route polyline
+        if (routePolyline != null) {
+            routePolyline.remove();
+            routePolyline = null;
+        }
+        
         // Clear driver markers
         for (Marker marker : driverMarkers) {
             marker.remove();
@@ -868,8 +1079,6 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                         
                         // Update search field with the place name
                         etSearch.setText(place.getName());
-                        
-                        Toast.makeText(this, "Found: " + place.getName(), Toast.LENGTH_SHORT).show();
                     } else {
                         Toast.makeText(this, "Could not get location details", Toast.LENGTH_SHORT).show();
                     }
