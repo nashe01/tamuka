@@ -7,17 +7,17 @@
     
     <!-- Driver head -->
     <path
-        android:fillColor="@color/white"
+        android:fillColor="@color/purple_500"
         android:pathData="M12,12c2.21,0 4,-1.79 4,-4s-1.79,-4 -4,-4 -4,1.79 -4,4 1.79,4 4,4z"/>
     
     <!-- Driver shoulders/body -->
     <path
-        android:fillColor="@color/white"
+        android:fillColor="@color/purple_500"
         android:pathData="M12,14c-2.67,0 -8,1.34 -8,4v2h16v-2c0,-2.66 -5.33,-4 -8,-4z"/>
     
     <!-- Driver cap -->
     <path
-        android:fillColor="@color/white"
+        android:fillColor="@color/purple_500"
         android:pathData="M12,2C8.13,2 5,5.13 5,9c0,0.55 0.45,1 1,1h12c0.55,0 1,-0.45 1,-1C19,5.13 15.87,2 12,2z"/>
     
 </vector>
