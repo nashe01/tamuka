@@ -94,8 +94,9 @@ public class FirebaseService {
         driverData.put("name", name);
         driverData.put("gender", gender);
         driverData.put("currentLocation", new HashMap<String, Object>() {{
-            put("lat", 0.0);
-            put("lng", 0.0);
+            put("lat", -17.82486);  // Harare CBD default location
+            put("lng", 31.05343);   // Harare CBD default location
+            put("address", "Location not set");
         }});
         driverData.put("status", "unavailable");
         driverData.put("rating", 0.0);
@@ -122,7 +123,35 @@ public class FirebaseService {
         userData.put("entityId", driverId);
         batch.set(userRef, userData, SetOptions.merge());
         
-        return batch.commit();
+        return batch.commit()
+            .continueWithTask(task -> {
+                if (task.isSuccessful()) {
+                    // Create live driver data in Realtime Database
+                    createDriverLiveData(driverId, -17.82486, 31.05343, "unavailable");
+                    return Tasks.forResult(null);
+                } else {
+                    throw task.getException();
+                }
+            });
+    }
+
+    /**
+     * Create live driver data in Realtime Database
+     */
+    private void createDriverLiveData(String driverId, double lat, double lng, String status) {
+        Log.d(TAG, "Creating live driver data for: " + driverId);
+        
+        // Create driver status
+        realtimeDb.child("drivers_live").child(driverId).child("status").setValue(status);
+        
+        // Create driver location
+        Map<String, Object> locationData = new HashMap<>();
+        locationData.put("lat", lat);
+        locationData.put("lng", lng);
+        locationData.put("timestamp", System.currentTimeMillis());
+        realtimeDb.child("drivers_live").child(driverId).child("location").setValue(locationData);
+        
+        Log.d(TAG, "Live driver data created for: " + driverId + " at " + lat + ", " + lng);
     }
 
     /**
@@ -216,8 +245,9 @@ public class FirebaseService {
         commuterData.put("uid", uid);
         commuterData.put("name", name);
         commuterData.put("currentLocation", new HashMap<String, Object>() {{
-            put("lat", 0.0);
-            put("lng", 0.0);
+            put("lat", -17.82486);  // Harare CBD default location
+            put("lng", 31.05343);   // Harare CBD default location
+            put("address", "Location not set");
         }});
         
         // Create commuter document

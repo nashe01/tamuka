@@ -191,9 +191,13 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
     private void getCurrentLocation() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) 
                 == PackageManager.PERMISSION_GRANTED) {
+            
+            Log.d("Location", "Getting current location...");
+            
             fusedLocationClient.getLastLocation()
                     .addOnSuccessListener(this, location -> {
                         if (location != null) {
+                            Log.d("Location", "Location found: " + location.getLatitude() + ", " + location.getLongitude());
                             currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
                             
                             // Add marker for current location
@@ -206,13 +210,31 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
                             
                             // Update driver location in Firebase
                             updateDriverLocationInFirebase();
+                        } else {
+                            Log.w("Location", "Location is null - using default location");
+                            // Use default location if GPS location is not available
+                            currentLocation = new LatLng(-17.82486, 31.05343); // Harare CBD
+                            updateDriverLocationInFirebase();
                         }
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e("Location", "Failed to get location", e);
+                        // Use default location if location service fails
+                        currentLocation = new LatLng(-17.82486, 31.05343); // Harare CBD
+                        updateDriverLocationInFirebase();
                     });
+        } else {
+            Log.w("Location", "Location permission not granted - using default location");
+            // Use default location if permission not granted
+            currentLocation = new LatLng(-17.82486, 31.05343); // Harare CBD
+            updateDriverLocationInFirebase();
         }
     }
     
     private void updateDriverLocationInFirebase() {
         if (currentLocation != null && currentDriverId != null) {
+            Log.d("LocationUpdate", "Updating driver location: " + currentLocation.latitude + ", " + currentLocation.longitude);
+            
             // Update location in Realtime Database for live updates
             firebaseService.updateDriverLocationLive(currentDriverId, currentLocation.latitude, currentLocation.longitude);
             
@@ -220,11 +242,13 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
             // For now, we'll update it every time, but in production you'd want to throttle this
             firebaseService.updateDriverLocationFirestore(currentDriverId, currentLocation.latitude, currentLocation.longitude)
                 .addOnSuccessListener(aVoid -> {
-                    Log.d("LocationUpdate", "Driver location updated in Firestore");
+                    Log.d("LocationUpdate", "Driver location updated in Firestore: " + currentLocation.latitude + ", " + currentLocation.longitude);
                 })
                 .addOnFailureListener(e -> {
                     Log.e("LocationUpdate", "Failed to update driver location in Firestore", e);
                 });
+        } else {
+            Log.w("LocationUpdate", "Cannot update location - currentLocation: " + currentLocation + ", currentDriverId: " + currentDriverId);
         }
     }
 
