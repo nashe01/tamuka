@@ -72,16 +72,28 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
         // Initialize preferences
         prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         
-        // Get current driver ID
-        SharedPreferences authPrefs = getSharedPreferences("MockAuth", MODE_PRIVATE);
-        String currentUserPhone = authPrefs.getString("current_user_phone", "");
-        currentDriverId = "driver_" + currentUserPhone.replaceAll("[^0-9]", "");
-
         // Initialize Firebase service
         firebaseService = FirebaseService.getInstance();
         
-        // Create driver profile in Firebase
-        createDriverProfile();
+        // Get current user's entity ID (driverId)
+        firebaseService.getCurrentUserEntityId()
+            .addOnSuccessListener(entityId -> {
+                if (entityId != null) {
+                    currentDriverId = entityId;
+                    Log.d("DriverActivity", "Current driver ID: " + currentDriverId);
+                    
+                    // Set up ride request listening now that we have the driver ID
+                    setupRideRequestListening();
+                } else {
+                    Toast.makeText(this, "Driver profile not found. Please register again.", Toast.LENGTH_LONG).show();
+                    logout();
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e("DriverActivity", "Failed to get current user entity ID", e);
+                Toast.makeText(this, "Authentication error. Please login again.", Toast.LENGTH_LONG).show();
+                logout();
+            });
 
         // Initialize location client
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
@@ -100,6 +112,12 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
 
         // Set up availability toggle
         switchAvailability.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (currentDriverId == null) {
+                Toast.makeText(this, "Driver ID not available. Please wait...", Toast.LENGTH_SHORT).show();
+                switchAvailability.setChecked(!isChecked); // Revert the change
+                return;
+            }
+            
             String status = isChecked ? "Available" : "Offline";
             int color = isChecked ? getResources().getColor(R.color.green) : getResources().getColor(R.color.red);
             
@@ -109,19 +127,11 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
             // Save status to SharedPreferences
             prefs.edit().putBoolean(KEY_DRIVER_STATUS, isChecked).apply();
             
-            // Update availability in Firebase
-            String availability = isChecked ? "available" : "offline";
-            firebaseService.updateDriverAvailability(currentDriverId, availability, new FirebaseService.DatabaseCallback() {
-                @Override
-                public void onSuccess(String message) {
-                    Toast.makeText(DashboardDriverActivity.this, "Status updated: " + status, Toast.LENGTH_SHORT).show();
-                }
-                
-                @Override
-                public void onError(String error) {
-                    Toast.makeText(DashboardDriverActivity.this, "Failed to update status: " + error, Toast.LENGTH_SHORT).show();
-                }
-            });
+            // Update availability in both Firestore and Realtime Database
+            String availability = isChecked ? "available" : "unavailable";
+            firebaseService.updateDriverStatus(currentDriverId, availability);
+            
+            Toast.makeText(DashboardDriverActivity.this, "Status updated: " + status, Toast.LENGTH_SHORT).show();
         });
 
         // Load saved availability status
@@ -134,9 +144,6 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
 
         // Update header with user role
         updateNavigationHeader();
-
-        // Set up ride request listening
-        setupRideRequestListening();
 
         // Request location permission
         requestLocationPermission();
@@ -205,24 +212,19 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
     }
     
     private void updateDriverLocationInFirebase() {
-        if (currentLocation != null) {
-            Driver.LocationData locationData = new Driver.LocationData(
-                    currentLocation.latitude, 
-                    currentLocation.longitude, 
-                    "Current Location"
-            );
+        if (currentLocation != null && currentDriverId != null) {
+            // Update location in Realtime Database for live updates
+            firebaseService.updateDriverLocationLive(currentDriverId, currentLocation.latitude, currentLocation.longitude);
             
-            firebaseService.updateDriverLocation(currentDriverId, locationData, new FirebaseService.DatabaseCallback() {
-                @Override
-                public void onSuccess(String message) {
-                    // Location updated successfully
-                }
-                
-                @Override
-                public void onError(String error) {
-                    // Handle error if needed
-                }
-            });
+            // Update location in Firestore periodically (every 10 seconds or when stopped)
+            // For now, we'll update it every time, but in production you'd want to throttle this
+            firebaseService.updateDriverLocationFirestore(currentDriverId, currentLocation.latitude, currentLocation.longitude)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d("LocationUpdate", "Driver location updated in Firestore");
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("LocationUpdate", "Failed to update driver location in Firestore", e);
+                });
         }
     }
 
@@ -300,19 +302,39 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
     }
     
     private void setupRideRequestListening() {
-        // Listen for incoming ride requests
-        firebaseService.listenToDriverRideRequests(currentDriverId, new FirebaseService.RideRequestListener() {
+        if (currentDriverId == null) {
+            // Wait for driver ID to be available
+            return;
+        }
+        
+        // Listen for incoming ride requests from Realtime Database
+        firebaseService.listenDriverRideRequests(currentDriverId, new com.google.firebase.database.ValueEventListener() {
             @Override
-            public void onRideRequestUpdated(RideRequest rideRequest) {
-                if ("pending".equals(rideRequest.status)) {
-                    currentRideRequest = rideRequest;
-                    showIncomingRideRequestDialog(rideRequest);
+            public void onDataChange(com.google.firebase.database.DataSnapshot dataSnapshot) {
+                for (com.google.firebase.database.DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    String status = snapshot.child("status").getValue(String.class);
+                    if ("pending".equals(status)) {
+                        String rideId = snapshot.getKey();
+                        if (rideId != null) {
+                            // Get full ride request details from Firestore
+                            firebaseService.getRideRequestDetails(rideId)
+                                .addOnSuccessListener(rideRequest -> {
+                                    if (rideRequest != null) {
+                                        currentRideRequest = rideRequest;
+                                        showIncomingRideRequestDialog(rideRequest);
+                                    }
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.e("RideRequest", "Failed to get ride request details", e);
+                                });
+                        }
+                    }
                 }
             }
             
             @Override
-            public void onError(String error) {
-                Toast.makeText(DashboardDriverActivity.this, "Error listening to ride requests: " + error, Toast.LENGTH_SHORT).show();
+            public void onCancelled(com.google.firebase.database.DatabaseError databaseError) {
+                Toast.makeText(DashboardDriverActivity.this, "Error listening to ride requests: " + databaseError.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -340,34 +362,26 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
     }
     
     private void acceptRideRequest(RideRequest rideRequest) {
-        // Update ride request status to accepted
-        firebaseService.updateRideRequestStatus(rideRequest.rideId, "accepted", new FirebaseService.DatabaseCallback() {
-            @Override
-            public void onSuccess(String message) {
+        // Update ride request status to accepted in both databases
+        firebaseService.updateRideRequestStatus(rideRequest.rideId, "accepted")
+            .addOnSuccessListener(aVoid -> {
                 Toast.makeText(DashboardDriverActivity.this, "Ride accepted! Navigate to pickup location.", Toast.LENGTH_LONG).show();
                 // Here you would navigate to ride tracking screen
-            }
-            
-            @Override
-            public void onError(String error) {
-                Toast.makeText(DashboardDriverActivity.this, "Failed to accept ride: " + error, Toast.LENGTH_SHORT).show();
-            }
-        });
+            })
+            .addOnFailureListener(e -> {
+                Toast.makeText(DashboardDriverActivity.this, "Failed to accept ride: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            });
     }
     
     private void declineRideRequest(RideRequest rideRequest) {
-        // Update ride request status to declined
-        firebaseService.updateRideRequestStatus(rideRequest.rideId, "declined", new FirebaseService.DatabaseCallback() {
-            @Override
-            public void onSuccess(String message) {
+        // Update ride request status to declined in both databases
+        firebaseService.updateRideRequestStatus(rideRequest.rideId, "declined")
+            .addOnSuccessListener(aVoid -> {
                 Toast.makeText(DashboardDriverActivity.this, "Ride declined", Toast.LENGTH_SHORT).show();
-            }
-            
-            @Override
-            public void onError(String error) {
-                Toast.makeText(DashboardDriverActivity.this, "Failed to decline ride: " + error, Toast.LENGTH_SHORT).show();
-            }
-        });
+            })
+            .addOnFailureListener(e -> {
+                Toast.makeText(DashboardDriverActivity.this, "Failed to decline ride: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            });
     }
     
     private double calculateDistance(LatLng point1, LatLng point2) {
@@ -390,30 +404,6 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
         return Math.round(distance * 100.0) / 100.0;
     }
     
-    private void createDriverProfile() {
-        SharedPreferences authPrefs = getSharedPreferences("MockAuth", MODE_PRIVATE);
-        String driverName = authPrefs.getString(currentDriverId.replace("driver_", "") + "_name", "Driver");
-        
-        Driver driver = new Driver(
-                currentDriverId,
-                driverName,
-                currentDriverId.replace("driver_", ""),
-                new Driver.LocationData(0, 0, "Unknown Location"),
-                4.5,
-                0,
-                "offline"
-        );
-        
-        firebaseService.createDriver(driver, new FirebaseService.DatabaseCallback() {
-            @Override
-            public void onSuccess(String message) {
-                Log.d("DashboardDriverActivity", "Driver profile created: " + message);
-            }
-            
-            @Override
-            public void onError(String error) {
-                Log.e("DashboardDriverActivity", "Failed to create driver profile: " + error);
-            }
-        });
-    }
+    // This method is no longer needed as driver profiles are created during registration
+    // The driver profile should already exist in Firestore from the registration process
 }

@@ -8,19 +8,24 @@ public class RideRequest {
     public LocationData destination;
     public String status; // pending, accepted, declined, completed
     public long timestamp;
+    public int people;
+    public double priceEach;
 
     public RideRequest() {
         // Default constructor required for Firebase
     }
 
     public RideRequest(String rideId, String commuterId, String driverId, 
-                      LocationData pickupLocation, LocationData destination, String status) {
+                      LocationData pickupLocation, LocationData destination, String status,
+                      int people, double priceEach) {
         this.rideId = rideId;
         this.commuterId = commuterId;
         this.driverId = driverId;
         this.pickupLocation = pickupLocation;
         this.destination = destination;
         this.status = status;
+        this.people = people;
+        this.priceEach = priceEach;
         this.timestamp = System.currentTimeMillis();
     }
 
