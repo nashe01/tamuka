@@ -12,7 +12,11 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
+import android.widget.RatingBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -98,6 +102,20 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private MaterialCardView driverInfoCard;
     private Driver selectedDriver;
     private CustomInfoWindowAdapter infoWindowAdapter;
+    
+    // Driver selection card variables
+    private View driverSelectionCard;
+    private TextView tvDriverName;
+    private RatingBar ratingBar;
+    private TextView tvRating;
+    private TextView tvDistance;
+    private TextView tvCompletedRides;
+    private TextView tvResponseTime;
+    private TextView tvVehicleInfo;
+    private Button btnCancel;
+    private Button btnRequestRide;
+    private Animation slideUpAnimation;
+    private Animation slideDownAnimation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -112,6 +130,9 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         rvSuggestions = findViewById(R.id.rvSuggestions);
         drawerLayout = findViewById(R.id.drawerLayout);
         navigationView = findViewById(R.id.navigationView);
+        
+        // Initialize driver selection card
+        initializeDriverSelectionCard();
 
         // Initialize preferences
         prefs = getSharedPreferences("MockAuth", MODE_PRIVATE);
@@ -179,15 +200,16 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         googleMap.setOnMarkerClickListener(marker -> {
             if (marker.getTag() != null && marker.getTag() instanceof Driver) {
                 selectedDriver = (Driver) marker.getTag();
-                // Show custom info window instead of automatically requesting ride
-                marker.showInfoWindow();
+                // Show sliding card instead of info window
+                showDriverSelectionCard(selectedDriver);
             }
             return true;
         });
         
-        // Set up map click listener to hide suggestions
+        // Set up map click listener to hide suggestions and driver card
         googleMap.setOnMapClickListener(latLng -> {
             hideSuggestions();
+            hideDriverSelectionCard();
         });
     }
 
@@ -677,13 +699,8 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         // Show immediate feedback
         Toast.makeText(this, "Sending request to " + driver.name + "...", Toast.LENGTH_SHORT).show();
         
-        // Hide the info window
-        for (Marker marker : driverMarkers) {
-            if (marker.getTag() == driver) {
-                marker.hideInfoWindow();
-                break;
-            }
-        }
+        // Hide the driver selection card
+        hideDriverSelectionCard();
         
         // Send ride request
         requestRide(driver);
@@ -1177,5 +1194,99 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         // This method is no longer needed as commuter profiles are created during registration
         // The commuter profile should already exist in Firestore from the registration process
         Log.d("HomeCommuterActivity", "Commuter profile should already exist from registration");
+    }
+    
+    /**
+     * Initialize the driver selection card and its components
+     */
+    private void initializeDriverSelectionCard() {
+        driverSelectionCard = findViewById(R.id.driverSelectionCard);
+        
+        // Initialize card views
+        tvDriverName = driverSelectionCard.findViewById(R.id.tvDriverName);
+        ratingBar = driverSelectionCard.findViewById(R.id.ratingBar);
+        tvRating = driverSelectionCard.findViewById(R.id.tvRating);
+        tvDistance = driverSelectionCard.findViewById(R.id.tvDistance);
+        tvCompletedRides = driverSelectionCard.findViewById(R.id.tvCompletedRides);
+        tvResponseTime = driverSelectionCard.findViewById(R.id.tvResponseTime);
+        tvVehicleInfo = driverSelectionCard.findViewById(R.id.tvVehicleInfo);
+        btnCancel = driverSelectionCard.findViewById(R.id.btnCancel);
+        btnRequestRide = driverSelectionCard.findViewById(R.id.btnRequestRide);
+        
+        // Initialize animations
+        slideUpAnimation = AnimationUtils.loadAnimation(this, R.anim.slide_up);
+        slideDownAnimation = AnimationUtils.loadAnimation(this, R.anim.slide_down);
+        
+        // Set up button listeners
+        btnCancel.setOnClickListener(v -> hideDriverSelectionCard());
+        btnRequestRide.setOnClickListener(v -> {
+            if (selectedDriver != null) {
+                onRequestRide(selectedDriver);
+            }
+        });
+        
+        // Set up slide down animation listener
+        slideDownAnimation.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {}
+            
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                driverSelectionCard.setVisibility(View.GONE);
+            }
+            
+            @Override
+            public void onAnimationRepeat(Animation animation) {}
+        });
+        
+        // Initially hide the card
+        driverSelectionCard.setVisibility(View.GONE);
+    }
+    
+    /**
+     * Show the driver selection card with smooth slide up animation
+     */
+    private void showDriverSelectionCard(Driver driver) {
+        if (driver == null) return;
+        
+        // Populate card with driver information
+        tvDriverName.setText(driver.name);
+        ratingBar.setRating((float) driver.rating);
+        tvRating.setText(String.format("%.1f", driver.rating));
+        tvCompletedRides.setText(String.valueOf(driver.completedRides));
+        tvResponseTime.setText("2 min"); // Mock response time
+        tvVehicleInfo.setText("Toyota"); // Mock vehicle info
+        
+        // Calculate and display distance
+        if (driver.currentLocation != null && currentLocation != null) {
+            double distance = calculateDistance(currentLocation, 
+                new LatLng(driver.currentLocation.lat, driver.currentLocation.lng));
+            tvDistance.setText(String.format("%.1f km", distance));
+        } else {
+            tvDistance.setText("N/A");
+        }
+        
+        // Show card with animation
+        driverSelectionCard.setVisibility(View.VISIBLE);
+        driverSelectionCard.startAnimation(slideUpAnimation);
+    }
+    
+    /**
+     * Hide the driver selection card with smooth slide down animation
+     */
+    private void hideDriverSelectionCard() {
+        if (driverSelectionCard.getVisibility() == View.VISIBLE) {
+            driverSelectionCard.startAnimation(slideDownAnimation);
+        }
+    }
+    
+    @Override
+    public void onBackPressed() {
+        // If driver selection card is visible, hide it instead of closing activity
+        if (driverSelectionCard != null && driverSelectionCard.getVisibility() == View.VISIBLE) {
+            hideDriverSelectionCard();
+        } else {
+            super.onBackPressed();
+        }
     }
 }
