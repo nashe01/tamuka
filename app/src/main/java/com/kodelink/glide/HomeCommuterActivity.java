@@ -119,6 +119,13 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private TextInputEditText etPricePerPerson;
     private Animation slideUpAnimation;
     private Animation slideDownAnimation;
+    
+    // Ride request sent card variables
+    private View rideRequestSentCard;
+    private TextView tvDriverNameSent;
+    private Button btnCancelRequest;
+    private Animation fadeInAnimation;
+    private Animation fadeOutAnimation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -136,6 +143,9 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         
         // Initialize driver selection card
         initializeDriverSelectionCard();
+        
+        // Initialize ride request sent card
+        initializeRideRequestSentCard();
 
         // Initialize preferences
         prefs = getSharedPreferences("MockAuth", MODE_PRIVATE);
@@ -800,15 +810,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
      * Show a prominent message that ride request has been sent
      */
     private void showRideRequestSentMessage(String driverName) {
-        // Create a custom dialog to show the request sent message
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("🚗 Ride Request Sent!")
-                .setMessage("Your ride request has been sent to " + driverName + ".\n\nPlease wait for the driver to respond...")
-                .setPositiveButton("OK", (dialog, which) -> {
-                    dialog.dismiss();
-                })
-                .setCancelable(false)
-                .show();
+        showRideRequestSentCard(driverName);
     }
 
     private void showWaitingScreen(String rideId) {
@@ -1339,8 +1341,70 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         // If driver selection card is visible, hide it instead of closing activity
         if (driverSelectionCard != null && driverSelectionCard.getVisibility() == View.VISIBLE) {
             hideDriverSelectionCard();
+        } else if (rideRequestSentCard != null && rideRequestSentCard.getVisibility() == View.VISIBLE) {
+            hideRideRequestSentCard();
         } else {
             super.onBackPressed();
+        }
+    }
+    
+    /**
+     * Initialize the ride request sent card and its components
+     */
+    private void initializeRideRequestSentCard() {
+        rideRequestSentCard = findViewById(R.id.rideRequestSentCard);
+        
+        // Initialize card views
+        tvDriverNameSent = rideRequestSentCard.findViewById(R.id.tvDriverNameSent);
+        btnCancelRequest = rideRequestSentCard.findViewById(R.id.btnCancelRequest);
+        
+        // Initialize animations
+        fadeInAnimation = AnimationUtils.loadAnimation(this, R.anim.fade_in);
+        fadeOutAnimation = AnimationUtils.loadAnimation(this, R.anim.fade_out);
+        
+        // Set up button listener
+        btnCancelRequest.setOnClickListener(v -> {
+            hideRideRequestSentCard();
+            // TODO: Implement cancel ride request functionality
+        });
+        
+        // Set up fade out animation listener
+        fadeOutAnimation.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {}
+            
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                rideRequestSentCard.setVisibility(View.GONE);
+            }
+            
+            @Override
+            public void onAnimationRepeat(Animation animation) {}
+        });
+        
+        // Initially hide the card
+        rideRequestSentCard.setVisibility(View.GONE);
+    }
+    
+    /**
+     * Show the ride request sent card with fade in animation
+     */
+    private void showRideRequestSentCard(String driverName) {
+        if (driverName != null) {
+            tvDriverNameSent.setText(driverName);
+        }
+        
+        // Show card with animation
+        rideRequestSentCard.setVisibility(View.VISIBLE);
+        rideRequestSentCard.startAnimation(fadeInAnimation);
+    }
+    
+    /**
+     * Hide the ride request sent card with fade out animation
+     */
+    private void hideRideRequestSentCard() {
+        if (rideRequestSentCard.getVisibility() == View.VISIBLE) {
+            rideRequestSentCard.startAnimation(fadeOutAnimation);
         }
     }
 }
