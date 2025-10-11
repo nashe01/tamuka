@@ -39,7 +39,7 @@
         android:id="@+id/tvLoginTitle"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Welcome to Glide"
+        android:text="Welcome to Swift Ride"
         android:textSize="28sp"
         android:textStyle="bold"
         android:textColor="@color/primary"

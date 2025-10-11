@@ -1,9 +1,9 @@
 <resources>
-    <string name="app_name">Glide</string>
+    <string name="app_name">Swift Ride</string>
     <string name="splash_logo_desc">App logo</string>
 
     <!-- Onboarding -->
-    <string name="onb1_title">Welcome to Glide</string>
+    <string name="onb1_title">Welcome to Swift Ride</string>
     <string name="onb1_desc">Your journey made simple.</string>
     <string name="onb2_title">Real-time Tracking</string>
     <string name="onb2_desc">Track rides and arrivals effortlessly.</string>
