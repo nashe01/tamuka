@@ -491,6 +491,104 @@ public class FirebaseService {
         return getUserRole(auth.getCurrentUser().getUid());
     }
 
+    // ==================== RIDE HISTORY ====================
+    
+    /**
+     * Get ride history for a driver
+     */
+    public Task<List<RideRequest>> getDriverRideHistory(String driverId) {
+        return firestore.collection("rideRequests")
+            .whereEqualTo("driverId", driverId)
+            .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .get()
+            .continueWith(task -> {
+                List<RideRequest> rides = new ArrayList<>();
+                if (task.isSuccessful()) {
+                    QuerySnapshot snapshot = task.getResult();
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                        RideRequest ride = parseRideRequest(doc);
+                        if (ride != null) {
+                            rides.add(ride);
+                        }
+                    }
+                }
+                return rides;
+            });
+    }
+
+    /**
+     * Get ride history for a commuter
+     */
+    public Task<List<RideRequest>> getCommuterRideHistory(String commuterId) {
+        return firestore.collection("rideRequests")
+            .whereEqualTo("commuterId", commuterId)
+            .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .get()
+            .continueWith(task -> {
+                List<RideRequest> rides = new ArrayList<>();
+                if (task.isSuccessful()) {
+                    QuerySnapshot snapshot = task.getResult();
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                        RideRequest ride = parseRideRequest(doc);
+                        if (ride != null) {
+                            rides.add(ride);
+                        }
+                    }
+                }
+                return rides;
+            });
+    }
+
+    /**
+     * Parse RideRequest from Firestore document
+     */
+    private RideRequest parseRideRequest(DocumentSnapshot doc) {
+        try {
+            RideRequest ride = new RideRequest();
+            ride.rideId = doc.getString("rideId");
+            ride.commuterId = doc.getString("commuterId");
+            ride.driverId = doc.getString("driverId");
+            ride.status = doc.getString("status");
+            ride.people = doc.getLong("people").intValue();
+            ride.priceEach = doc.getDouble("priceEach");
+            
+            // Parse timestamp
+            Object timestamp = doc.get("timestamp");
+            if (timestamp instanceof com.google.firebase.Timestamp) {
+                ride.timestamp = ((com.google.firebase.Timestamp) timestamp).toDate().getTime();
+            } else if (timestamp instanceof Long) {
+                ride.timestamp = (Long) timestamp;
+            } else {
+                ride.timestamp = System.currentTimeMillis();
+            }
+            
+            // Parse pickup location
+            Map<String, Object> pickupMap = (Map<String, Object>) doc.get("pickupLocation");
+            if (pickupMap != null) {
+                ride.pickupLocation = new RideRequest.LocationData(
+                    ((Number) pickupMap.get("lat")).doubleValue(),
+                    ((Number) pickupMap.get("lng")).doubleValue(),
+                    (String) pickupMap.get("address")
+                );
+            }
+            
+            // Parse destination location
+            Map<String, Object> destMap = (Map<String, Object>) doc.get("destination");
+            if (destMap != null) {
+                ride.destination = new RideRequest.LocationData(
+                    ((Number) destMap.get("lat")).doubleValue(),
+                    ((Number) destMap.get("lng")).doubleValue(),
+                    (String) destMap.get("address")
+                );
+            }
+            
+            return ride;
+        } catch (Exception e) {
+            Log.e(TAG, "Error parsing ride request", e);
+            return null;
+        }
+    }
+
     // ==================== CALLBACK INTERFACES ====================
     
     public interface DatabaseCallback {

@@ -316,8 +316,8 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
             // Already on home screen, just close drawer
             Toast.makeText(this, "You're already on the home screen", Toast.LENGTH_SHORT).show();
         } else if (id == R.id.nav_ride_history) {
-            Toast.makeText(this, "Ride History clicked", Toast.LENGTH_SHORT).show();
-            // TODO: Implement ride history screen
+            Intent intent = new Intent(this, RideHistoryActivity.class);
+            startActivity(intent);
         } else if (id == R.id.nav_notifications) {
             Toast.makeText(this, "Notifications clicked", Toast.LENGTH_SHORT).show();
         } else if (id == R.id.nav_settings) {

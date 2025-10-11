@@ -65,6 +65,9 @@
         <activity
             android:name=".DashboardDriverActivity"
             android:exported="false" />
+        <activity
+            android:name=".RideHistoryActivity"
+            android:exported="false" />
     </application>
 
 </manifest>
