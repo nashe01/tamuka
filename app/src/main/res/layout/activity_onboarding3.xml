@@ -36,7 +36,7 @@
     android:layout_height="wrap_content"
     android:layout_marginTop="8dp"
     android:layout_marginBottom="80dp"
-    android:text="Ready to get started? Join thousands of users who trust Glide for their daily transportation needs. Create your account and start your journey today!"
+    android:text="Ready to get started? Join thousands of users who trust Glide for their daily transportation needs!"
     android:textAlignment="center"
     android:textSize="16sp"
     android:lineSpacingExtra="4dp"

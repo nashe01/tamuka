@@ -35,13 +35,15 @@
     android:id="@+id/tvDescription1"
     android:layout_width="0dp"
     android:layout_height="wrap_content"
-    android:layout_marginTop="-40dp"
+    android:layout_marginTop="8dp"
+    android:layout_marginBottom="80dp"
     android:text="Experience seamless transportation with Glide. Whether you're looking for a ride or want to earn by driving, we've got you covered."
     android:textAlignment="center"
     android:textSize="16sp"
     android:lineSpacingExtra="4dp"
     app:layout_constraintStart_toStartOf="parent"
     app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintTop_toBottomOf="@id/ivIllustration1"
     app:layout_constraintBottom_toTopOf="@id/groupButtons1" />
 
   <LinearLayout
@@ -75,7 +77,6 @@
   </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
-
 
 
 
