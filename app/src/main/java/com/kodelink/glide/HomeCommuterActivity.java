@@ -111,7 +111,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private TextView tvRating;
     private TextView tvDistance;
     private TextView tvCompletedRides;
-    private TextView tvResponseTime;
+    private TextView tvDriverGender;
     private TextView tvVehicleInfo;
     private Button btnCancel;
     private Button btnRequestRide;
@@ -1243,7 +1243,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         tvRating = driverSelectionCard.findViewById(R.id.tvRating);
         tvDistance = driverSelectionCard.findViewById(R.id.tvDistance);
         tvCompletedRides = driverSelectionCard.findViewById(R.id.tvCompletedRides);
-        tvResponseTime = driverSelectionCard.findViewById(R.id.tvResponseTime);
+        tvDriverGender = driverSelectionCard.findViewById(R.id.tvDriverGender);
         tvVehicleInfo = driverSelectionCard.findViewById(R.id.tvVehicleInfo);
         btnCancel = driverSelectionCard.findViewById(R.id.btnCancel);
         btnRequestRide = driverSelectionCard.findViewById(R.id.btnRequestRide);
@@ -1291,8 +1291,21 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         ratingBar.setRating((float) driver.rating);
         tvRating.setText(String.format("%.1f", driver.rating));
         tvCompletedRides.setText(String.valueOf(driver.completedRides));
-        tvResponseTime.setText("2 min"); // Mock response time
-        tvVehicleInfo.setText("Toyota"); // Mock vehicle info
+        tvDriverGender.setText(driver.gender != null ? driver.gender : "N/A");
+        
+        // Fetch vehicle information from database
+        firebaseService.getVehicleDetails(driver.driverId)
+            .addOnSuccessListener(vehicle -> {
+                if (vehicle != null && vehicle.vehicleType != null) {
+                    tvVehicleInfo.setText(vehicle.vehicleType);
+                } else {
+                    tvVehicleInfo.setText("N/A");
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e("DriverCard", "Failed to get vehicle details", e);
+                tvVehicleInfo.setText("N/A");
+            });
         
         // Calculate and display distance
         if (driver.currentLocation != null && currentLocation != null) {
