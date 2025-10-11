@@ -233,6 +233,35 @@ public class FirebaseService {
             });
     }
 
+    /**
+     * Get commuter details from Firestore
+     */
+    public Task<Commuter> getCommuterDetails(String commuterId) {
+        return firestore.collection("commuters").document(commuterId).get()
+            .continueWith(task -> {
+                if (task.isSuccessful() && task.getResult().exists()) {
+                    DocumentSnapshot doc = task.getResult();
+                    Commuter commuter = new Commuter();
+                    commuter.commuterId = doc.getString("commuterId");
+                    commuter.uid = doc.getString("uid");
+                    commuter.name = doc.getString("name");
+                    
+                    // Parse location data
+                    Map<String, Object> locationMap = (Map<String, Object>) doc.get("currentLocation");
+                    if (locationMap != null) {
+                        commuter.currentLocation = new Commuter.LocationData(
+                            ((Number) locationMap.get("lat")).doubleValue(),
+                            ((Number) locationMap.get("lng")).doubleValue(),
+                            (String) locationMap.get("address")
+                        );
+                    }
+                    
+                    return commuter;
+                }
+                return null;
+            });
+    }
+
     // ==================== COMMUTER OPERATIONS ====================
     
     /**
