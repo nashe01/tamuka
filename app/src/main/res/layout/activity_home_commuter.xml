@@ -388,7 +388,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Price Per Person ($)"
+                        android:text="Fare Per Person ($)"
                         android:textSize="12sp"
                         android:textColor="@color/gray_600"
                         android:layout_marginBottom="4dp" />
