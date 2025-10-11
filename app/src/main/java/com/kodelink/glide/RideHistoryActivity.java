@@ -3,15 +3,14 @@ package com.kodelink.glide;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.MenuItem;
 import android.widget.Toast;
+
+import android.widget.ImageButton;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
-import com.google.android.material.appbar.MaterialToolbar;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +23,7 @@ public class RideHistoryActivity extends AppCompatActivity {
     private List<RideHistoryItem> rideHistoryList;
     private FirebaseService firebaseService;
     private SharedPreferences prefs;
+    private ImageButton btnBack;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,15 +31,11 @@ public class RideHistoryActivity extends AppCompatActivity {
         setContentView(R.layout.activity_ride_history);
 
         // Initialize views
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        btnBack = findViewById(R.id.btnBack);
         rvRideHistory = findViewById(R.id.rvRideHistory);
 
-        // Set up toolbar
-        setSupportActionBar(toolbar);
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle("Ride History");
-        }
+        // Set up back button
+        btnBack.setOnClickListener(v -> onBackPressed());
 
         // Initialize services
         firebaseService = FirebaseService.getInstance();
@@ -55,14 +51,6 @@ public class RideHistoryActivity extends AppCompatActivity {
         loadRideHistory();
     }
 
-    @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        if (item.getItemId() == android.R.id.home) {
-            onBackPressed();
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
 
     private void loadRideHistory() {
         String currentUserPhone = prefs.getString("current_user_phone", "");
