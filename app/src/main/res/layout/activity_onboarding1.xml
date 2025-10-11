@@ -38,9 +38,10 @@
     android:layout_width="0dp"
     android:layout_height="wrap_content"
     android:layout_marginTop="16dp"
-    android:text="Your journey made simple."
+    android:text="Experience seamless transportation with Glide. Whether you're looking for a ride or want to earn by driving, we've got you covered with our reliable and user-friendly platform."
     android:textAlignment="center"
     android:textSize="16sp"
+    android:lineSpacingExtra="4dp"
     app:layout_constraintStart_toStartOf="parent"
     app:layout_constraintEnd_toEndOf="parent"
     app:layout_constraintBottom_toTopOf="@id/groupButtons1" />
