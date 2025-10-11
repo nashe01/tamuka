@@ -4,6 +4,16 @@
 
     <group android:checkableBehavior="single">
         <item
+            android:id="@+id/nav_home"
+            android:icon="@drawable/ic_home"
+            android:title="Home" />
+
+        <item
+            android:id="@+id/nav_ride_history"
+            android:icon="@drawable/ic_history"
+            android:title="Ride History" />
+
+        <item
             android:id="@+id/nav_notifications"
             android:icon="@drawable/ic_notifications"
             android:title="Notifications" />
@@ -12,6 +22,13 @@
             android:id="@+id/nav_settings"
             android:icon="@drawable/ic_settings"
             android:title="Settings" />
+    </group>
+
+    <group android:id="@+id/group_logout">
+        <item
+            android:id="@+id/nav_logout"
+            android:icon="@drawable/ic_logout"
+            android:title="Logout" />
     </group>
 
 </menu>

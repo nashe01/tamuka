@@ -2,6 +2,7 @@ package com.kodelink.glide;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -11,9 +12,15 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
+import android.widget.ImageButton;
+import android.widget.RatingBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import com.google.android.material.textfield.TextInputEditText;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -32,6 +39,8 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.AutocompletePrediction;
 import com.google.android.libraries.places.api.model.AutocompleteSessionToken;
@@ -45,11 +54,22 @@ import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
+import com.google.firebase.auth.FirebaseAuth;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.HashMap;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class HomeCommuterActivity extends AppCompatActivity implements OnMapReadyCallback, NavigationView.OnNavigationItemSelectedListener, GoogleMap.OnMapLongClickListener {
 
@@ -57,7 +77,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private MapView mapView;
     private GoogleMap googleMap;
     private FusedLocationProviderClient fusedLocationClient;
-    private MaterialButton btnMenu;
+    private ImageButton btnMenu;
     private TextInputEditText etSearch;
     private TextInputLayout searchLayout;
     private DrawerLayout drawerLayout;
@@ -76,6 +96,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private LatLng currentLocation;
     private LatLng destinationLocation;
     private Marker destinationMarker;
+    private Polyline routePolyline;
     private List<Driver> availableDrivers = new ArrayList<>();
     private List<Marker> driverMarkers = new ArrayList<>();
     private FirebaseService firebaseService;
@@ -83,6 +104,29 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private MaterialCardView driverInfoCard;
     private Driver selectedDriver;
     private CustomInfoWindowAdapter infoWindowAdapter;
+    
+    // Driver selection card variables
+    private View driverSelectionCard;
+    private TextView tvDriverName;
+    private RatingBar ratingBar;
+    private TextView tvRating;
+    private TextView tvDistance;
+    private TextView tvCompletedRides;
+    private TextView tvDriverGender;
+    private TextView tvVehicleInfo;
+    private Button btnCancel;
+    private Button btnRequestRide;
+    private TextInputEditText etNumberOfPeople;
+    private TextInputEditText etPricePerPerson;
+    private Animation slideUpAnimation;
+    private Animation slideDownAnimation;
+    
+    // Ride request sent card variables
+    private View rideRequestSentCard;
+    private TextView tvDriverNameSent;
+    private Button btnCancelRequest;
+    private Animation fadeInAnimation;
+    private Animation fadeOutAnimation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -97,6 +141,12 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         rvSuggestions = findViewById(R.id.rvSuggestions);
         drawerLayout = findViewById(R.id.drawerLayout);
         navigationView = findViewById(R.id.navigationView);
+        
+        // Initialize driver selection card
+        initializeDriverSelectionCard();
+        
+        // Initialize ride request sent card
+        initializeRideRequestSentCard();
 
         // Initialize preferences
         prefs = getSharedPreferences("MockAuth", MODE_PRIVATE);
@@ -164,15 +214,16 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         googleMap.setOnMarkerClickListener(marker -> {
             if (marker.getTag() != null && marker.getTag() instanceof Driver) {
                 selectedDriver = (Driver) marker.getTag();
-                // Show custom info window instead of automatically requesting ride
-                marker.showInfoWindow();
+                // Show sliding card instead of info window
+                showDriverSelectionCard(selectedDriver);
             }
             return true;
         });
         
-        // Set up map click listener to hide suggestions
+        // Set up map click listener to hide suggestions and driver card
         googleMap.setOnMapClickListener(latLng -> {
             hideSuggestions();
+            hideDriverSelectionCard();
         });
     }
 
@@ -252,23 +303,22 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     
     private void updateCommuterLocationInFirebase() {
         if (currentLocation != null) {
-            Commuter.LocationData locationData = new Commuter.LocationData(
-                    currentLocation.latitude, 
-                    currentLocation.longitude, 
-                    "Current Location"
-            );
-            
-            firebaseService.updateCommuterLocation(currentUserId, locationData, new FirebaseService.DatabaseCallback() {
-                @Override
-                public void onSuccess(String message) {
-                    // Location updated successfully
-                }
-                
-                @Override
-                public void onError(String error) {
-                    // Handle error if needed
-                }
-            });
+            // Get current user's entity ID (commuterId) and update location
+            firebaseService.getCurrentUserEntityId()
+                .addOnSuccessListener(entityId -> {
+                    if (entityId != null) {
+                        firebaseService.updateCommuterLocation(entityId, currentLocation.latitude, currentLocation.longitude)
+                            .addOnSuccessListener(aVoid -> {
+                                Log.d("LocationUpdate", "Commuter location updated successfully");
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e("LocationUpdate", "Failed to update commuter location", e);
+                            });
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("LocationUpdate", "Failed to get current user entity ID", e);
+                });
         }
     }
 
@@ -300,10 +350,18 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
         
-        if (id == R.id.nav_notifications) {
+        if (id == R.id.nav_home) {
+            // Already on home screen, just close drawer
+            Toast.makeText(this, "You're already on the home screen", Toast.LENGTH_SHORT).show();
+        } else if (id == R.id.nav_ride_history) {
+            Intent intent = new Intent(this, RideHistoryActivity.class);
+            startActivity(intent);
+        } else if (id == R.id.nav_notifications) {
             Toast.makeText(this, "Notifications clicked", Toast.LENGTH_SHORT).show();
         } else if (id == R.id.nav_settings) {
             Toast.makeText(this, "Settings clicked", Toast.LENGTH_SHORT).show();
+        } else if (id == R.id.nav_logout) {
+            logout();
         }
         
         drawerLayout.closeDrawer(GravityCompat.START);
@@ -318,6 +376,66 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         if (tvUserRole != null) {
             tvUserRole.setText(role.equals("driver") ? "Driver" : "Commuter");
         }
+        
+        // Update user name from database
+        TextView tvUserName = navigationView.getHeaderView(0).findViewById(R.id.tvUserName);
+        if (tvUserName != null) {
+            // Get current user's entity ID from database
+            firebaseService.getCurrentUserEntityId()
+                .addOnSuccessListener(entityId -> {
+                    if (entityId != null) {
+                        if (role.equals("driver")) {
+                            // Fetch driver name from database
+                            firebaseService.getDriverDetails(entityId)
+                                .addOnSuccessListener(driver -> {
+                                    if (driver != null && driver.name != null) {
+                                        tvUserName.setText(driver.name);
+                                    } else {
+                                        tvUserName.setText("Driver");
+                                    }
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.e("NavigationHeader", "Failed to get driver details", e);
+                                    tvUserName.setText("Driver");
+                                });
+                        } else {
+                            // Fetch commuter name from database
+                            firebaseService.getCommuterDetails(entityId)
+                                .addOnSuccessListener(commuter -> {
+                                    if (commuter != null && commuter.name != null) {
+                                        tvUserName.setText(commuter.name);
+                                    } else {
+                                        tvUserName.setText("Commuter");
+                                    }
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.e("NavigationHeader", "Failed to get commuter details", e);
+                                    tvUserName.setText("Commuter");
+                                });
+                        }
+                    } else {
+                        tvUserName.setText("User");
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("NavigationHeader", "Failed to get current user entity ID", e);
+                    tvUserName.setText("User");
+                });
+        }
+    }
+
+    private void logout() {
+        // Clear SharedPreferences
+        prefs.edit().clear().apply();
+        
+        // Sign out from Firebase Auth if using Firebase
+        FirebaseAuth.getInstance().signOut();
+        
+        // Navigate to login screen
+        Intent intent = new Intent(HomeCommuterActivity.this, LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
     }
 
     // Map long click listener for destination selection
@@ -360,10 +478,202 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                     new com.google.android.gms.maps.model.LatLngBounds(southwest, northeast), 100));
         }
         
+        // Draw route from current location to destination
+        if (currentLocation != null) {
+            drawRoute(currentLocation, destination);
+        }
+        
         // Show nearby drivers
         showNearbyDrivers();
         
         Toast.makeText(this, "Destination set! Looking for nearby drivers...", Toast.LENGTH_SHORT).show();
+    }
+
+    /**
+     * Draw route from origin to destination using Google Maps Directions API
+     */
+    private void drawRoute(LatLng origin, LatLng destination) {
+        // Remove existing route polyline
+        if (routePolyline != null) {
+            routePolyline.remove();
+        }
+        
+        // Get route from Google Maps Directions API
+        getRouteFromDirectionsAPI(origin, destination);
+    }
+    
+    /**
+     * Get route data from Google Maps Directions API
+     */
+    private void getRouteFromDirectionsAPI(LatLng origin, LatLng destination) {
+        String apiKey = "AIzaSyDc8_axTnQWPUiBWVgp1ifK0zV8Zy21Tqw";
+        String originStr = origin.latitude + "," + origin.longitude;
+        String destinationStr = destination.latitude + "," + destination.longitude;
+        
+        String url = "https://maps.googleapis.com/maps/api/directions/json?" +
+                "origin=" + originStr +
+                "&destination=" + destinationStr +
+                "&key=" + apiKey;
+        
+        Log.d("DirectionsAPI", "Requesting route: " + url);
+        
+        // Execute API call in background thread
+        new Thread(() -> {
+            try {
+                String response = makeHttpRequest(url);
+                runOnUiThread(() -> parseDirectionsResponse(response, origin, destination));
+            } catch (Exception e) {
+                Log.e("DirectionsAPI", "Error getting directions: " + e.getMessage());
+                runOnUiThread(() -> {
+                    // Fallback to straight line if API fails
+                    drawStraightLineRoute(origin, destination);
+                    Toast.makeText(this, "Could not get route details. Showing direct path.", Toast.LENGTH_SHORT).show();
+                });
+            }
+        }).start();
+    }
+    
+    /**
+     * Make HTTP request to Google Directions API
+     */
+    private String makeHttpRequest(String urlString) throws IOException {
+        URL url = new URL(urlString);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+        connection.setConnectTimeout(10000);
+        connection.setReadTimeout(10000);
+        
+        InputStream inputStream = connection.getInputStream();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+        StringBuilder response = new StringBuilder();
+        String line;
+        
+        while ((line = reader.readLine()) != null) {
+            response.append(line);
+        }
+        
+        reader.close();
+        inputStream.close();
+        connection.disconnect();
+        
+        return response.toString();
+    }
+    
+    /**
+     * Parse the Directions API response and draw the route
+     */
+    private void parseDirectionsResponse(String response, LatLng origin, LatLng destination) {
+        try {
+            JSONObject jsonResponse = new JSONObject(response);
+            String status = jsonResponse.getString("status");
+            
+            if (!status.equals("OK")) {
+                Log.e("DirectionsAPI", "Directions API error: " + status);
+                drawStraightLineRoute(origin, destination);
+                return;
+            }
+            
+            JSONArray routes = jsonResponse.getJSONArray("routes");
+            if (routes.length() == 0) {
+                Log.e("DirectionsAPI", "No routes found");
+                drawStraightLineRoute(origin, destination);
+                return;
+            }
+            
+            JSONObject route = routes.getJSONObject(0);
+            JSONArray legs = route.getJSONArray("legs");
+            JSONObject leg = legs.getJSONObject(0);
+            
+            // Extract distance and duration
+            JSONObject distance = leg.getJSONObject("distance");
+            JSONObject duration = leg.getJSONObject("duration");
+            
+            String distanceText = distance.getString("text");
+            String durationText = duration.getString("text");
+            
+            // Extract route points
+            JSONObject overviewPolyline = route.getJSONObject("overview_polyline");
+            String encodedPolyline = overviewPolyline.getString("points");
+            
+            // Decode polyline and draw route
+            List<LatLng> routePoints = decodePolyline(encodedPolyline);
+            drawRoutePolyline(routePoints);
+            
+            // Show route information
+            showRouteInfo(distanceText, durationText);
+            
+            Log.d("DirectionsAPI", "Route found: " + distanceText + ", " + durationText);
+            
+        } catch (JSONException e) {
+            Log.e("DirectionsAPI", "Error parsing directions response: " + e.getMessage());
+            drawStraightLineRoute(origin, destination);
+        }
+    }
+    
+    /**
+     * Decode Google's encoded polyline string
+     */
+    private List<LatLng> decodePolyline(String encoded) {
+        List<LatLng> poly = new ArrayList<>();
+        int index = 0, len = encoded.length();
+        int lat = 0, lng = 0;
+        
+        while (index < len) {
+            int b, shift = 0, result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lat += dlat;
+            
+            shift = 0;
+            result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lng += dlng;
+            
+            LatLng p = new LatLng(((double) lat / 1E5), ((double) lng / 1E5));
+            poly.add(p);
+        }
+        
+        return poly;
+    }
+    
+    /**
+     * Draw the route polyline on the map
+     */
+    private void drawRoutePolyline(List<LatLng> routePoints) {
+        if (routePoints.isEmpty()) return;
+        
+        routePolyline = googleMap.addPolyline(new PolylineOptions()
+                .addAll(routePoints)
+                .width(8)
+                .color(0xFF6200EE) // Primary color (purple)
+                .geodesic(true));
+    }
+    
+    /**
+     * Fallback method to draw straight line route
+     */
+    private void drawStraightLineRoute(LatLng origin, LatLng destination) {
+        List<LatLng> routePoints = new ArrayList<>();
+        routePoints.add(origin);
+        routePoints.add(destination);
+        drawRoutePolyline(routePoints);
+    }
+    
+    /**
+     * Show route information (distance and duration)
+     */
+    private void showRouteInfo(String distance, String duration) {
+        String routeInfo = "Route: " + distance + " • " + duration;
+        Toast.makeText(this, routeInfo, Toast.LENGTH_LONG).show();
     }
 
     private void showNearbyDrivers() {
@@ -374,17 +684,32 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         driverMarkers.clear();
         availableDrivers.clear();
         
-        // Get available drivers from Firebase
-        firebaseService.getAvailableDrivers(new FirebaseService.DriversListener() {
+        // Listen for available drivers from Realtime Database
+        firebaseService.listenAvailableDrivers(new com.google.firebase.database.ValueEventListener() {
             @Override
-            public void onDriversReceived(List<Driver> drivers) {
-                availableDrivers = drivers;
-                displayDriverMarkers();
+            public void onDataChange(com.google.firebase.database.DataSnapshot dataSnapshot) {
+                availableDrivers.clear();
+                for (com.google.firebase.database.DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    String driverId = snapshot.getKey();
+                    if (driverId != null) {
+                        // Get driver details from Firestore
+                        firebaseService.getDriverDetails(driverId)
+                            .addOnSuccessListener(driver -> {
+                                if (driver != null) {
+                                    availableDrivers.add(driver);
+                                    displayDriverMarkers();
+                                }
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e("DriverLoad", "Failed to load driver details for " + driverId, e);
+                            });
+                    }
+                }
             }
             
             @Override
-            public void onError(String error) {
-                Toast.makeText(HomeCommuterActivity.this, "Error loading drivers: " + error, Toast.LENGTH_SHORT).show();
+            public void onCancelled(com.google.firebase.database.DatabaseError databaseError) {
+                Toast.makeText(HomeCommuterActivity.this, "Error loading drivers: " + databaseError.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -431,99 +756,136 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
             return;
         }
         
+        // Get and validate input values
+        int numberOfPeople = 1;
+        double pricePerPerson = 5.0;
+        
+        try {
+            String peopleText = etNumberOfPeople.getText().toString().trim();
+            if (!peopleText.isEmpty()) {
+                numberOfPeople = Integer.parseInt(peopleText);
+                if (numberOfPeople < 1 || numberOfPeople > 8) {
+                    Toast.makeText(this, "Number of people must be between 1 and 8", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            }
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, "Please enter a valid number of people", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        try {
+            String priceText = etPricePerPerson.getText().toString().trim();
+            if (!priceText.isEmpty()) {
+                pricePerPerson = Double.parseDouble(priceText);
+                if (pricePerPerson < 0.01) {
+                    Toast.makeText(this, "Price per person must be greater than $0.00", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            }
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, "Please enter a valid price per person", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
         // Show immediate feedback
         Toast.makeText(this, "Sending request to " + driver.name + "...", Toast.LENGTH_SHORT).show();
         
-        // Hide the info window
-        for (Marker marker : driverMarkers) {
-            if (marker.getTag() == driver) {
-                marker.hideInfoWindow();
-                break;
-            }
-        }
+        // Hide the driver selection card
+        hideDriverSelectionCard();
         
-        // Send ride request
-        requestRide(driver);
+        // Send ride request with people and price data
+        requestRide(driver, numberOfPeople, pricePerPerson);
     }
 
-    private void requestRide(Driver driver) {
-        Log.d("RideRequest", "requestRide called for driver: " + driver.name);
+    private void requestRide(Driver driver, int numberOfPeople, double pricePerPerson) {
+        Log.d("RideRequest", "requestRide called for driver: " + driver.name + " with " + numberOfPeople + " people at $" + pricePerPerson + " each");
         
         if (currentLocation == null || destinationLocation == null) {
             Toast.makeText(this, "Please set your destination first", Toast.LENGTH_SHORT).show();
             return;
         }
         
-        // Create ride request
-        String rideId = "ride_" + System.currentTimeMillis();
-        Log.d("RideRequest", "Creating ride request with ID: " + rideId);
-        
-        RideRequest rideRequest = new RideRequest(
-                rideId,
-                currentUserId,
-                driver.driverId,
-                new RideRequest.LocationData(currentLocation.latitude, currentLocation.longitude, "Current Location"),
-                new RideRequest.LocationData(destinationLocation.latitude, destinationLocation.longitude, "Destination"),
-                "pending"
-        );
-        
-        Log.d("RideRequest", "Ride request created: " + rideRequest.toString());
-        Log.d("RideRequest", "Sending to Firebase...");
-        
-        // Send ride request to Firebase
-        firebaseService.createRideRequest(rideRequest, new FirebaseService.DatabaseCallback() {
-            @Override
-            public void onSuccess(String message) {
-                Log.d("RideRequest", "Firebase success: " + message);
-                // Show prominent success message
-                showRideRequestSentMessage(driver.name);
-                showWaitingScreen(rideId);
-            }
-            
-            @Override
-            public void onError(String error) {
-                Log.e("RideRequest", "Firebase error: " + error);
-                Toast.makeText(HomeCommuterActivity.this, "Failed to send ride request: " + error, Toast.LENGTH_LONG).show();
-            }
-        });
+        // Get current user's entity ID (commuterId)
+        firebaseService.getCurrentUserEntityId()
+            .addOnSuccessListener(commuterId -> {
+                if (commuterId == null) {
+                    Toast.makeText(HomeCommuterActivity.this, "User not found. Please login again.", Toast.LENGTH_LONG).show();
+                    return;
+                }
+                
+                Log.d("RideRequest", "Creating ride request for commuter: " + commuterId);
+                
+                // Create location data objects
+                RideRequest.LocationData pickupLocation = new RideRequest.LocationData(
+                    currentLocation.latitude, 
+                    currentLocation.longitude, 
+                    "Current Location"
+                );
+                
+                RideRequest.LocationData destination = new RideRequest.LocationData(
+                    destinationLocation.latitude, 
+                    destinationLocation.longitude, 
+                    "Destination"
+                );
+                
+                // Create ride request in both Firestore and Realtime Database
+                firebaseService.createRideRequest(
+                    commuterId,
+                    driver.driverId,
+                    pickupLocation,
+                    destination,
+                    numberOfPeople,
+                    pricePerPerson
+                ).addOnSuccessListener(aVoid -> {
+                    Log.d("RideRequest", "Ride request created successfully");
+                    showRideRequestSentMessage(driver.name);
+                    // Note: We'll need to get the rideId from the response or generate it consistently
+                    showWaitingScreen("ride_" + System.currentTimeMillis());
+                }).addOnFailureListener(e -> {
+                    Log.e("RideRequest", "Failed to create ride request", e);
+                    Toast.makeText(HomeCommuterActivity.this, "Failed to send ride request: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+            })
+            .addOnFailureListener(e -> {
+                Log.e("RideRequest", "Failed to get current user entity ID", e);
+                Toast.makeText(HomeCommuterActivity.this, "Authentication error. Please login again.", Toast.LENGTH_LONG).show();
+            });
     }
 
     /**
      * Show a prominent message that ride request has been sent
      */
     private void showRideRequestSentMessage(String driverName) {
-        // Create a custom dialog to show the request sent message
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("🚗 Ride Request Sent!")
-                .setMessage("Your ride request has been sent to " + driverName + ".\n\nPlease wait for the driver to respond...")
-                .setPositiveButton("OK", (dialog, which) -> {
-                    dialog.dismiss();
-                })
-                .setCancelable(false)
-                .show();
+        showRideRequestSentCard(driverName);
     }
 
     private void showWaitingScreen(String rideId) {
-        // Listen for ride request status updates
-        firebaseService.listenToRideRequest(rideId, new FirebaseService.RideRequestListener() {
+        // Listen for ride request status updates from Realtime Database
+        firebaseService.listenRideRequest(rideId, new com.google.firebase.database.ValueEventListener() {
             @Override
-            public void onRideRequestUpdated(RideRequest rideRequest) {
-                switch (rideRequest.status) {
-                    case "accepted":
-                        Toast.makeText(HomeCommuterActivity.this, "Ride accepted! Driver is on the way.", Toast.LENGTH_LONG).show();
-                        // Here you would navigate to ride tracking screen
-                        break;
-                    case "declined":
-                        Toast.makeText(HomeCommuterActivity.this, "Ride declined. Looking for another driver...", Toast.LENGTH_LONG).show();
-                        // Remove declined driver from available list and show others
-                        showNearbyDrivers();
-                        break;
+            public void onDataChange(com.google.firebase.database.DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    String status = dataSnapshot.child("status").getValue(String.class);
+                    if (status != null) {
+                        switch (status) {
+                            case "accepted":
+                                Toast.makeText(HomeCommuterActivity.this, "Ride accepted! Driver is on the way.", Toast.LENGTH_LONG).show();
+                                // Here you would navigate to ride tracking screen
+                                break;
+                            case "declined":
+                                Toast.makeText(HomeCommuterActivity.this, "Ride declined. Looking for another driver...", Toast.LENGTH_LONG).show();
+                                // Remove declined driver from available list and show others
+                                showNearbyDrivers();
+                                break;
+                        }
+                    }
                 }
             }
             
             @Override
-            public void onError(String error) {
-                Toast.makeText(HomeCommuterActivity.this, "Error: " + error, Toast.LENGTH_SHORT).show();
+            public void onCancelled(com.google.firebase.database.DatabaseError databaseError) {
+                Toast.makeText(HomeCommuterActivity.this, "Error: " + databaseError.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -710,6 +1072,12 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
             destinationMarker = null;
         }
         
+        // Remove route polyline
+        if (routePolyline != null) {
+            routePolyline.remove();
+            routePolyline = null;
+        }
+        
         // Clear driver markers
         for (Marker marker : driverMarkers) {
             marker.remove();
@@ -812,8 +1180,6 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                         
                         // Update search field with the place name
                         etSearch.setText(place.getName());
-                        
-                        Toast.makeText(this, "Found: " + place.getName(), Toast.LENGTH_SHORT).show();
                     } else {
                         Toast.makeText(this, "Could not get location details", Toast.LENGTH_SHORT).show();
                     }
@@ -909,24 +1275,183 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     }
     
     private void createCommuterProfile() {
-        String commuterName = prefs.getString(currentUserId + "_name", "Commuter");
-        Commuter commuter = new Commuter(
-                currentUserId,
-                commuterName,
-                currentUserId,
-                new Commuter.LocationData(0, 0, "Unknown Location")
-        );
+        // This method is no longer needed as commuter profiles are created during registration
+        // The commuter profile should already exist in Firestore from the registration process
+        Log.d("HomeCommuterActivity", "Commuter profile should already exist from registration");
+    }
+    
+    /**
+     * Initialize the driver selection card and its components
+     */
+    private void initializeDriverSelectionCard() {
+        driverSelectionCard = findViewById(R.id.driverSelectionCard);
         
-        firebaseService.createCommuter(commuter, new FirebaseService.DatabaseCallback() {
+        // Initialize card views
+        tvDriverName = driverSelectionCard.findViewById(R.id.tvDriverName);
+        ratingBar = driverSelectionCard.findViewById(R.id.ratingBar);
+        tvRating = driverSelectionCard.findViewById(R.id.tvRating);
+        tvDistance = driverSelectionCard.findViewById(R.id.tvDistance);
+        tvCompletedRides = driverSelectionCard.findViewById(R.id.tvCompletedRides);
+        tvDriverGender = driverSelectionCard.findViewById(R.id.tvDriverGender);
+        tvVehicleInfo = driverSelectionCard.findViewById(R.id.tvVehicleInfo);
+        btnCancel = driverSelectionCard.findViewById(R.id.btnCancel);
+        btnRequestRide = driverSelectionCard.findViewById(R.id.btnRequestRide);
+        etNumberOfPeople = driverSelectionCard.findViewById(R.id.etNumberOfPeople);
+        etPricePerPerson = driverSelectionCard.findViewById(R.id.etPricePerPerson);
+        
+        // Initialize animations
+        slideUpAnimation = AnimationUtils.loadAnimation(this, R.anim.slide_up);
+        slideDownAnimation = AnimationUtils.loadAnimation(this, R.anim.slide_down);
+        
+        // Set up button listeners
+        btnCancel.setOnClickListener(v -> hideDriverSelectionCard());
+        btnRequestRide.setOnClickListener(v -> {
+            if (selectedDriver != null) {
+                onRequestRide(selectedDriver);
+            }
+        });
+        
+        // Set up slide down animation listener
+        slideDownAnimation.setAnimationListener(new Animation.AnimationListener() {
             @Override
-            public void onSuccess(String message) {
-                Log.d("HomeCommuterActivity", "Commuter profile created: " + message);
+            public void onAnimationStart(Animation animation) {}
+            
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                driverSelectionCard.setVisibility(View.GONE);
             }
             
             @Override
-            public void onError(String error) {
-                Log.e("HomeCommuterActivity", "Failed to create commuter profile: " + error);
-            }
+            public void onAnimationRepeat(Animation animation) {}
         });
+        
+        // Initially hide the card
+        driverSelectionCard.setVisibility(View.GONE);
+    }
+    
+    /**
+     * Show the driver selection card with smooth slide up animation
+     */
+    private void showDriverSelectionCard(Driver driver) {
+        if (driver == null) return;
+        
+        // Populate card with driver information
+        tvDriverName.setText(driver.name);
+        ratingBar.setRating((float) driver.rating);
+        tvRating.setText(String.format("%.1f", driver.rating));
+        tvCompletedRides.setText(String.valueOf(driver.completedRides));
+        tvDriverGender.setText(driver.gender != null ? driver.gender : "N/A");
+        
+        // Fetch vehicle information from database
+        firebaseService.getVehicleDetails(driver.driverId)
+            .addOnSuccessListener(vehicle -> {
+                if (vehicle != null && vehicle.vehicleType != null) {
+                    tvVehicleInfo.setText(vehicle.vehicleType);
+                } else {
+                    tvVehicleInfo.setText("N/A");
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e("DriverCard", "Failed to get vehicle details", e);
+                tvVehicleInfo.setText("N/A");
+            });
+        
+        // Calculate and display distance
+        if (driver.currentLocation != null && currentLocation != null) {
+            double distance = calculateDistance(currentLocation, 
+                new LatLng(driver.currentLocation.lat, driver.currentLocation.lng));
+            tvDistance.setText(String.format("%.1f km", distance));
+        } else {
+            tvDistance.setText("N/A");
+        }
+        
+        // Reset input fields to default values
+        etNumberOfPeople.setText("1");
+        etPricePerPerson.setText("5.00");
+        
+        // Show card with animation
+        driverSelectionCard.setVisibility(View.VISIBLE);
+        driverSelectionCard.startAnimation(slideUpAnimation);
+    }
+    
+    /**
+     * Hide the driver selection card with smooth slide down animation
+     */
+    private void hideDriverSelectionCard() {
+        if (driverSelectionCard.getVisibility() == View.VISIBLE) {
+            driverSelectionCard.startAnimation(slideDownAnimation);
+        }
+    }
+    
+    @Override
+    public void onBackPressed() {
+        // If driver selection card is visible, hide it instead of closing activity
+        if (driverSelectionCard != null && driverSelectionCard.getVisibility() == View.VISIBLE) {
+            hideDriverSelectionCard();
+        } else if (rideRequestSentCard != null && rideRequestSentCard.getVisibility() == View.VISIBLE) {
+            hideRideRequestSentCard();
+        } else {
+            super.onBackPressed();
+        }
+    }
+    
+    /**
+     * Initialize the ride request sent card and its components
+     */
+    private void initializeRideRequestSentCard() {
+        rideRequestSentCard = findViewById(R.id.rideRequestSentCard);
+        
+        // Initialize card views
+        tvDriverNameSent = rideRequestSentCard.findViewById(R.id.tvDriverNameSent);
+        btnCancelRequest = rideRequestSentCard.findViewById(R.id.btnCancelRequest);
+        
+        // Initialize animations
+        fadeInAnimation = AnimationUtils.loadAnimation(this, R.anim.fade_in);
+        fadeOutAnimation = AnimationUtils.loadAnimation(this, R.anim.fade_out);
+        
+        // Set up button listener
+        btnCancelRequest.setOnClickListener(v -> {
+            hideRideRequestSentCard();
+            // TODO: Implement cancel ride request functionality
+        });
+        
+        // Set up fade out animation listener
+        fadeOutAnimation.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {}
+            
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                rideRequestSentCard.setVisibility(View.GONE);
+            }
+            
+            @Override
+            public void onAnimationRepeat(Animation animation) {}
+        });
+        
+        // Initially hide the card
+        rideRequestSentCard.setVisibility(View.GONE);
+    }
+    
+    /**
+     * Show the ride request sent card with fade in animation
+     */
+    private void showRideRequestSentCard(String driverName) {
+        if (driverName != null) {
+            tvDriverNameSent.setText(driverName);
+        }
+        
+        // Show card with animation
+        rideRequestSentCard.setVisibility(View.VISIBLE);
+        rideRequestSentCard.startAnimation(fadeInAnimation);
+    }
+    
+    /**
+     * Hide the ride request sent card with fade out animation
+     */
+    private void hideRideRequestSentCard() {
+        if (rideRequestSentCard.getVisibility() == View.VISIBLE) {
+            rideRequestSentCard.startAnimation(fadeOutAnimation);
+        }
     }
 }

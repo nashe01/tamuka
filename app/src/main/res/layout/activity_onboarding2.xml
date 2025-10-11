@@ -11,7 +11,7 @@
     android:id="@+id/tvTitle2"
     android:layout_width="0dp"
     android:layout_height="wrap_content"
-    android:text="Real-time Tracking"
+    android:text="Live Location Tracking"
     android:textSize="24sp"
     android:textStyle="bold"
     app:layout_constraintStart_toStartOf="parent"
@@ -20,28 +20,29 @@
 
   <ImageView
     android:id="@+id/ivIllustration2"
-    android:layout_width="0dp"
-    android:layout_height="0dp"
+    android:layout_width="300dp"
+    android:layout_height="400dp"
     android:layout_marginTop="24dp"
     android:contentDescription="Illustration"
     android:scaleType="centerInside"
     android:src="@drawable/ic_menu_mylocation"
     app:layout_constraintTop_toBottomOf="@id/tvTitle2"
     app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintBottom_toTopOf="@id/tvDescription2"
-    app:layout_constraintVertical_bias="0.0" />
+    app:layout_constraintEnd_toEndOf="parent" />
 
   <TextView
     android:id="@+id/tvDescription2"
     android:layout_width="0dp"
     android:layout_height="wrap_content"
-    android:layout_marginTop="16dp"
-    android:text="Track rides and arrivals effortlessly."
+    android:layout_marginTop="8dp"
+    android:layout_marginBottom="80dp"
+    android:text="Stay connected with real-time location tracking. See exactly where your driver is and get accurate arrival times for peace of mind throughout your journey."
     android:textAlignment="center"
     android:textSize="16sp"
+    android:lineSpacingExtra="4dp"
     app:layout_constraintStart_toStartOf="parent"
     app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintTop_toBottomOf="@id/ivIllustration2"
     app:layout_constraintBottom_toTopOf="@id/groupButtons2" />
 
   <LinearLayout
@@ -50,7 +51,7 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:gravity="center"
-    android:layout_marginTop="24dp"
+    android:layout_marginTop="48dp"
     app:layout_constraintStart_toStartOf="parent"
     app:layout_constraintEnd_toEndOf="parent"
     app:layout_constraintBottom_toBottomOf="parent">
@@ -75,7 +76,6 @@
   </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
-
 
 
 
