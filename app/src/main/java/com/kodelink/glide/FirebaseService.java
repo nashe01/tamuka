@@ -233,6 +233,35 @@ public class FirebaseService {
             });
     }
 
+    /**
+     * Get commuter details from Firestore
+     */
+    public Task<Commuter> getCommuterDetails(String commuterId) {
+        return firestore.collection("commuters").document(commuterId).get()
+            .continueWith(task -> {
+                if (task.isSuccessful() && task.getResult().exists()) {
+                    DocumentSnapshot doc = task.getResult();
+                    Commuter commuter = new Commuter();
+                    commuter.commuterId = doc.getString("commuterId");
+                    commuter.uid = doc.getString("uid");
+                    commuter.name = doc.getString("name");
+                    
+                    // Parse location data
+                    Map<String, Object> locationMap = (Map<String, Object>) doc.get("currentLocation");
+                    if (locationMap != null) {
+                        commuter.currentLocation = new Commuter.LocationData(
+                            ((Number) locationMap.get("lat")).doubleValue(),
+                            ((Number) locationMap.get("lng")).doubleValue(),
+                            (String) locationMap.get("address")
+                        );
+                    }
+                    
+                    return commuter;
+                }
+                return null;
+            });
+    }
+
     // ==================== COMMUTER OPERATIONS ====================
     
     /**
@@ -288,17 +317,29 @@ public class FirebaseService {
                                        int people, double priceEach) {
         String rideId = firestore.collection("rideRequests").document().getId();
         
-        // Create ride request data
-        Map<String, Object> rideData = new HashMap<>();
-        rideData.put("rideId", rideId);
-        rideData.put("commuterId", commuterId);
-        rideData.put("driverId", driverId);
-        rideData.put("pickupLocation", pickup);
-        rideData.put("destination", destination);
-        rideData.put("status", "pending");
-        rideData.put("people", people);
-        rideData.put("priceEach", priceEach);
-        rideData.put("timestamp", FieldValue.serverTimestamp());
+        // Create ride request data for Firestore
+        Map<String, Object> firestoreData = new HashMap<>();
+        firestoreData.put("rideId", rideId);
+        firestoreData.put("commuterId", commuterId);
+        firestoreData.put("driverId", driverId);
+        firestoreData.put("pickupLocation", pickup);
+        firestoreData.put("destination", destination);
+        firestoreData.put("status", "pending");
+        firestoreData.put("people", people);
+        firestoreData.put("priceEach", priceEach);
+        firestoreData.put("timestamp", FieldValue.serverTimestamp());
+        
+        // Create ride request data for Realtime Database (with regular timestamp)
+        Map<String, Object> realtimeData = new HashMap<>();
+        realtimeData.put("rideId", rideId);
+        realtimeData.put("commuterId", commuterId);
+        realtimeData.put("driverId", driverId);
+        realtimeData.put("pickupLocation", pickup);
+        realtimeData.put("destination", destination);
+        realtimeData.put("status", "pending");
+        realtimeData.put("people", people);
+        realtimeData.put("priceEach", priceEach);
+        realtimeData.put("timestamp", System.currentTimeMillis());
         
         // Create in Firestore
         DocumentReference rideRef = firestore.collection("rideRequests").document(rideId);
@@ -306,10 +347,10 @@ public class FirebaseService {
         // Create in Realtime Database for live updates
         DatabaseReference liveRideRef = realtimeDb.child("rideRequestsLive").child(rideId);
         
-        return rideRef.set(rideData)
+        return rideRef.set(firestoreData)
             .continueWithTask(task -> {
                 if (task.isSuccessful()) {
-                    return liveRideRef.setValue(rideData);
+                    return liveRideRef.setValue(realtimeData);
                 } else {
                     throw task.getException();
             }
@@ -448,6 +489,104 @@ public class FirebaseService {
         }
         
         return getUserRole(auth.getCurrentUser().getUid());
+    }
+
+    // ==================== RIDE HISTORY ====================
+    
+    /**
+     * Get ride history for a driver
+     */
+    public Task<List<RideRequest>> getDriverRideHistory(String driverId) {
+        return firestore.collection("rideRequests")
+            .whereEqualTo("driverId", driverId)
+            .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .get()
+            .continueWith(task -> {
+                List<RideRequest> rides = new ArrayList<>();
+                if (task.isSuccessful()) {
+                    QuerySnapshot snapshot = task.getResult();
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                        RideRequest ride = parseRideRequest(doc);
+                        if (ride != null) {
+                            rides.add(ride);
+                        }
+                    }
+                }
+                return rides;
+            });
+    }
+
+    /**
+     * Get ride history for a commuter
+     */
+    public Task<List<RideRequest>> getCommuterRideHistory(String commuterId) {
+        return firestore.collection("rideRequests")
+            .whereEqualTo("commuterId", commuterId)
+            .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .get()
+            .continueWith(task -> {
+                List<RideRequest> rides = new ArrayList<>();
+                if (task.isSuccessful()) {
+                    QuerySnapshot snapshot = task.getResult();
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                        RideRequest ride = parseRideRequest(doc);
+                        if (ride != null) {
+                            rides.add(ride);
+                        }
+                    }
+                }
+                return rides;
+            });
+    }
+
+    /**
+     * Parse RideRequest from Firestore document
+     */
+    private RideRequest parseRideRequest(DocumentSnapshot doc) {
+        try {
+            RideRequest ride = new RideRequest();
+            ride.rideId = doc.getString("rideId");
+            ride.commuterId = doc.getString("commuterId");
+            ride.driverId = doc.getString("driverId");
+            ride.status = doc.getString("status");
+            ride.people = doc.getLong("people").intValue();
+            ride.priceEach = doc.getDouble("priceEach");
+            
+            // Parse timestamp
+            Object timestamp = doc.get("timestamp");
+            if (timestamp instanceof com.google.firebase.Timestamp) {
+                ride.timestamp = ((com.google.firebase.Timestamp) timestamp).toDate().getTime();
+            } else if (timestamp instanceof Long) {
+                ride.timestamp = (Long) timestamp;
+            } else {
+                ride.timestamp = System.currentTimeMillis();
+            }
+            
+            // Parse pickup location
+            Map<String, Object> pickupMap = (Map<String, Object>) doc.get("pickupLocation");
+            if (pickupMap != null) {
+                ride.pickupLocation = new RideRequest.LocationData(
+                    ((Number) pickupMap.get("lat")).doubleValue(),
+                    ((Number) pickupMap.get("lng")).doubleValue(),
+                    (String) pickupMap.get("address")
+                );
+            }
+            
+            // Parse destination location
+            Map<String, Object> destMap = (Map<String, Object>) doc.get("destination");
+            if (destMap != null) {
+                ride.destination = new RideRequest.LocationData(
+                    ((Number) destMap.get("lat")).doubleValue(),
+                    ((Number) destMap.get("lng")).doubleValue(),
+                    (String) destMap.get("address")
+                );
+            }
+            
+            return ride;
+        } catch (Exception e) {
+            Log.e(TAG, "Error parsing ride request", e);
+            return null;
+        }
     }
 
     // ==================== CALLBACK INTERFACES ====================

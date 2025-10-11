@@ -11,6 +11,7 @@ import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -59,7 +60,7 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
     private MapView mapView;
     private GoogleMap googleMap;
     private FusedLocationProviderClient fusedLocationClient;
-    private MaterialButton btnMenu;
+    private ImageButton btnMenu;
     private SwitchMaterial switchAvailability;
     private TextView tvAvailabilityStatus;
     private DrawerLayout drawerLayout;
@@ -315,8 +316,8 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
             // Already on home screen, just close drawer
             Toast.makeText(this, "You're already on the home screen", Toast.LENGTH_SHORT).show();
         } else if (id == R.id.nav_ride_history) {
-            Toast.makeText(this, "Ride History clicked", Toast.LENGTH_SHORT).show();
-            // TODO: Implement ride history screen
+            Intent intent = new Intent(this, RideHistoryActivity.class);
+            startActivity(intent);
         } else if (id == R.id.nav_notifications) {
             Toast.makeText(this, "Notifications clicked", Toast.LENGTH_SHORT).show();
         } else if (id == R.id.nav_settings) {
@@ -337,6 +338,52 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
         TextView tvUserRole = navigationView.getHeaderView(0).findViewById(R.id.tvUserRole);
         if (tvUserRole != null) {
             tvUserRole.setText(role.equals("driver") ? "Driver" : "Commuter");
+        }
+        
+        // Update user name from database
+        TextView tvUserName = navigationView.getHeaderView(0).findViewById(R.id.tvUserName);
+        if (tvUserName != null) {
+            // Get current user's entity ID from database
+            firebaseService.getCurrentUserEntityId()
+                .addOnSuccessListener(entityId -> {
+                    if (entityId != null) {
+                        if (role.equals("driver")) {
+                            // Fetch driver name from database
+                            firebaseService.getDriverDetails(entityId)
+                                .addOnSuccessListener(driver -> {
+                                    if (driver != null && driver.name != null) {
+                                        tvUserName.setText(driver.name);
+                                    } else {
+                                        tvUserName.setText("Driver");
+                                    }
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.e("NavigationHeader", "Failed to get driver details", e);
+                                    tvUserName.setText("Driver");
+                                });
+                        } else {
+                            // Fetch commuter name from database
+                            firebaseService.getCommuterDetails(entityId)
+                                .addOnSuccessListener(commuter -> {
+                                    if (commuter != null && commuter.name != null) {
+                                        tvUserName.setText(commuter.name);
+                                    } else {
+                                        tvUserName.setText("Commuter");
+                                    }
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.e("NavigationHeader", "Failed to get commuter details", e);
+                                    tvUserName.setText("Commuter");
+                                });
+                        }
+                    } else {
+                        tvUserName.setText("User");
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("NavigationHeader", "Failed to get current user entity ID", e);
+                    tvUserName.setText("User");
+                });
         }
     }
 

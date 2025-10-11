@@ -16,6 +16,7 @@ import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.RatingBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -76,7 +77,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private MapView mapView;
     private GoogleMap googleMap;
     private FusedLocationProviderClient fusedLocationClient;
-    private MaterialButton btnMenu;
+    private ImageButton btnMenu;
     private TextInputEditText etSearch;
     private TextInputLayout searchLayout;
     private DrawerLayout drawerLayout;
@@ -111,7 +112,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private TextView tvRating;
     private TextView tvDistance;
     private TextView tvCompletedRides;
-    private TextView tvResponseTime;
+    private TextView tvDriverGender;
     private TextView tvVehicleInfo;
     private Button btnCancel;
     private Button btnRequestRide;
@@ -119,6 +120,13 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private TextInputEditText etPricePerPerson;
     private Animation slideUpAnimation;
     private Animation slideDownAnimation;
+    
+    // Ride request sent card variables
+    private View rideRequestSentCard;
+    private TextView tvDriverNameSent;
+    private Button btnCancelRequest;
+    private Animation fadeInAnimation;
+    private Animation fadeOutAnimation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -136,6 +144,9 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         
         // Initialize driver selection card
         initializeDriverSelectionCard();
+        
+        // Initialize ride request sent card
+        initializeRideRequestSentCard();
 
         // Initialize preferences
         prefs = getSharedPreferences("MockAuth", MODE_PRIVATE);
@@ -343,8 +354,8 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
             // Already on home screen, just close drawer
             Toast.makeText(this, "You're already on the home screen", Toast.LENGTH_SHORT).show();
         } else if (id == R.id.nav_ride_history) {
-            Toast.makeText(this, "Ride History clicked", Toast.LENGTH_SHORT).show();
-            // TODO: Implement ride history screen
+            Intent intent = new Intent(this, RideHistoryActivity.class);
+            startActivity(intent);
         } else if (id == R.id.nav_notifications) {
             Toast.makeText(this, "Notifications clicked", Toast.LENGTH_SHORT).show();
         } else if (id == R.id.nav_settings) {
@@ -364,6 +375,52 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         TextView tvUserRole = navigationView.getHeaderView(0).findViewById(R.id.tvUserRole);
         if (tvUserRole != null) {
             tvUserRole.setText(role.equals("driver") ? "Driver" : "Commuter");
+        }
+        
+        // Update user name from database
+        TextView tvUserName = navigationView.getHeaderView(0).findViewById(R.id.tvUserName);
+        if (tvUserName != null) {
+            // Get current user's entity ID from database
+            firebaseService.getCurrentUserEntityId()
+                .addOnSuccessListener(entityId -> {
+                    if (entityId != null) {
+                        if (role.equals("driver")) {
+                            // Fetch driver name from database
+                            firebaseService.getDriverDetails(entityId)
+                                .addOnSuccessListener(driver -> {
+                                    if (driver != null && driver.name != null) {
+                                        tvUserName.setText(driver.name);
+                                    } else {
+                                        tvUserName.setText("Driver");
+                                    }
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.e("NavigationHeader", "Failed to get driver details", e);
+                                    tvUserName.setText("Driver");
+                                });
+                        } else {
+                            // Fetch commuter name from database
+                            firebaseService.getCommuterDetails(entityId)
+                                .addOnSuccessListener(commuter -> {
+                                    if (commuter != null && commuter.name != null) {
+                                        tvUserName.setText(commuter.name);
+                                    } else {
+                                        tvUserName.setText("Commuter");
+                                    }
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.e("NavigationHeader", "Failed to get commuter details", e);
+                                    tvUserName.setText("Commuter");
+                                });
+                        }
+                    } else {
+                        tvUserName.setText("User");
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("NavigationHeader", "Failed to get current user entity ID", e);
+                    tvUserName.setText("User");
+                });
         }
     }
 
@@ -800,15 +857,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
      * Show a prominent message that ride request has been sent
      */
     private void showRideRequestSentMessage(String driverName) {
-        // Create a custom dialog to show the request sent message
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("🚗 Ride Request Sent!")
-                .setMessage("Your ride request has been sent to " + driverName + ".\n\nPlease wait for the driver to respond...")
-                .setPositiveButton("OK", (dialog, which) -> {
-                    dialog.dismiss();
-                })
-                .setCancelable(false)
-                .show();
+        showRideRequestSentCard(driverName);
     }
 
     private void showWaitingScreen(String rideId) {
@@ -1243,7 +1292,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         tvRating = driverSelectionCard.findViewById(R.id.tvRating);
         tvDistance = driverSelectionCard.findViewById(R.id.tvDistance);
         tvCompletedRides = driverSelectionCard.findViewById(R.id.tvCompletedRides);
-        tvResponseTime = driverSelectionCard.findViewById(R.id.tvResponseTime);
+        tvDriverGender = driverSelectionCard.findViewById(R.id.tvDriverGender);
         tvVehicleInfo = driverSelectionCard.findViewById(R.id.tvVehicleInfo);
         btnCancel = driverSelectionCard.findViewById(R.id.btnCancel);
         btnRequestRide = driverSelectionCard.findViewById(R.id.btnRequestRide);
@@ -1291,8 +1340,21 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         ratingBar.setRating((float) driver.rating);
         tvRating.setText(String.format("%.1f", driver.rating));
         tvCompletedRides.setText(String.valueOf(driver.completedRides));
-        tvResponseTime.setText("2 min"); // Mock response time
-        tvVehicleInfo.setText("Toyota"); // Mock vehicle info
+        tvDriverGender.setText(driver.gender != null ? driver.gender : "N/A");
+        
+        // Fetch vehicle information from database
+        firebaseService.getVehicleDetails(driver.driverId)
+            .addOnSuccessListener(vehicle -> {
+                if (vehicle != null && vehicle.vehicleType != null) {
+                    tvVehicleInfo.setText(vehicle.vehicleType);
+                } else {
+                    tvVehicleInfo.setText("N/A");
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e("DriverCard", "Failed to get vehicle details", e);
+                tvVehicleInfo.setText("N/A");
+            });
         
         // Calculate and display distance
         if (driver.currentLocation != null && currentLocation != null) {
@@ -1326,8 +1388,70 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         // If driver selection card is visible, hide it instead of closing activity
         if (driverSelectionCard != null && driverSelectionCard.getVisibility() == View.VISIBLE) {
             hideDriverSelectionCard();
+        } else if (rideRequestSentCard != null && rideRequestSentCard.getVisibility() == View.VISIBLE) {
+            hideRideRequestSentCard();
         } else {
             super.onBackPressed();
+        }
+    }
+    
+    /**
+     * Initialize the ride request sent card and its components
+     */
+    private void initializeRideRequestSentCard() {
+        rideRequestSentCard = findViewById(R.id.rideRequestSentCard);
+        
+        // Initialize card views
+        tvDriverNameSent = rideRequestSentCard.findViewById(R.id.tvDriverNameSent);
+        btnCancelRequest = rideRequestSentCard.findViewById(R.id.btnCancelRequest);
+        
+        // Initialize animations
+        fadeInAnimation = AnimationUtils.loadAnimation(this, R.anim.fade_in);
+        fadeOutAnimation = AnimationUtils.loadAnimation(this, R.anim.fade_out);
+        
+        // Set up button listener
+        btnCancelRequest.setOnClickListener(v -> {
+            hideRideRequestSentCard();
+            // TODO: Implement cancel ride request functionality
+        });
+        
+        // Set up fade out animation listener
+        fadeOutAnimation.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {}
+            
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                rideRequestSentCard.setVisibility(View.GONE);
+            }
+            
+            @Override
+            public void onAnimationRepeat(Animation animation) {}
+        });
+        
+        // Initially hide the card
+        rideRequestSentCard.setVisibility(View.GONE);
+    }
+    
+    /**
+     * Show the ride request sent card with fade in animation
+     */
+    private void showRideRequestSentCard(String driverName) {
+        if (driverName != null) {
+            tvDriverNameSent.setText(driverName);
+        }
+        
+        // Show card with animation
+        rideRequestSentCard.setVisibility(View.VISIBLE);
+        rideRequestSentCard.startAnimation(fadeInAnimation);
+    }
+    
+    /**
+     * Hide the ride request sent card with fade out animation
+     */
+    private void hideRideRequestSentCard() {
+        if (rideRequestSentCard.getVisibility() == View.VISIBLE) {
+            rideRequestSentCard.startAnimation(fadeOutAnimation);
         }
     }
 }
