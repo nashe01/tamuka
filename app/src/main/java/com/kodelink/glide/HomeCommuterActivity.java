@@ -16,6 +16,7 @@ import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.RatingBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -76,7 +77,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private MapView mapView;
     private GoogleMap googleMap;
     private FusedLocationProviderClient fusedLocationClient;
-    private MaterialButton btnMenu;
+    private ImageButton btnMenu;
     private TextInputEditText etSearch;
     private TextInputLayout searchLayout;
     private DrawerLayout drawerLayout;
