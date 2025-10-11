@@ -490,12 +490,25 @@
             android:padding="20dp"
             android:gravity="center">
 
-            <!-- Success Icon -->
-            <View
+            <!-- Driver Icon with Success Indicator -->
+            <FrameLayout
                 android:layout_width="60dp"
                 android:layout_height="60dp"
-                android:layout_marginBottom="16dp"
-                android:background="@drawable/success_icon_bg" />
+                android:layout_marginBottom="16dp">
+
+                <View
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:background="@drawable/driver_avatar_bg" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_driver"
+                    android:contentDescription="Driver icon" />
+
+            </FrameLayout>
 
             <!-- Title -->
             <TextView
