@@ -376,6 +376,14 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         if (tvUserRole != null) {
             tvUserRole.setText(role.equals("driver") ? "Driver" : "Commuter");
         }
+        
+        // Update user name
+        TextView tvUserName = navigationView.getHeaderView(0).findViewById(R.id.tvUserName);
+        if (tvUserName != null) {
+            // Get user name from SharedPreferences
+            String userName = prefs.getString(currentUserPhone + "_name", "User");
+            tvUserName.setText(userName);
+        }
     }
 
     private void logout() {

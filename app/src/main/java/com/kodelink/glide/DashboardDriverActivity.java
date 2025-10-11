@@ -11,6 +11,7 @@ import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -59,7 +60,7 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
     private MapView mapView;
     private GoogleMap googleMap;
     private FusedLocationProviderClient fusedLocationClient;
-    private MaterialButton btnMenu;
+    private ImageButton btnMenu;
     private SwitchMaterial switchAvailability;
     private TextView tvAvailabilityStatus;
     private DrawerLayout drawerLayout;
@@ -337,6 +338,14 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
         TextView tvUserRole = navigationView.getHeaderView(0).findViewById(R.id.tvUserRole);
         if (tvUserRole != null) {
             tvUserRole.setText(role.equals("driver") ? "Driver" : "Commuter");
+        }
+        
+        // Update user name
+        TextView tvUserName = navigationView.getHeaderView(0).findViewById(R.id.tvUserName);
+        if (tvUserName != null) {
+            // Get user name from SharedPreferences
+            String userName = authPrefs.getString(currentUserPhone + "_name", "User");
+            tvUserName.setText(userName);
         }
     }
 
