@@ -288,17 +288,29 @@ public class FirebaseService {
                                        int people, double priceEach) {
         String rideId = firestore.collection("rideRequests").document().getId();
         
-        // Create ride request data
-        Map<String, Object> rideData = new HashMap<>();
-        rideData.put("rideId", rideId);
-        rideData.put("commuterId", commuterId);
-        rideData.put("driverId", driverId);
-        rideData.put("pickupLocation", pickup);
-        rideData.put("destination", destination);
-        rideData.put("status", "pending");
-        rideData.put("people", people);
-        rideData.put("priceEach", priceEach);
-        rideData.put("timestamp", FieldValue.serverTimestamp());
+        // Create ride request data for Firestore
+        Map<String, Object> firestoreData = new HashMap<>();
+        firestoreData.put("rideId", rideId);
+        firestoreData.put("commuterId", commuterId);
+        firestoreData.put("driverId", driverId);
+        firestoreData.put("pickupLocation", pickup);
+        firestoreData.put("destination", destination);
+        firestoreData.put("status", "pending");
+        firestoreData.put("people", people);
+        firestoreData.put("priceEach", priceEach);
+        firestoreData.put("timestamp", FieldValue.serverTimestamp());
+        
+        // Create ride request data for Realtime Database (with regular timestamp)
+        Map<String, Object> realtimeData = new HashMap<>();
+        realtimeData.put("rideId", rideId);
+        realtimeData.put("commuterId", commuterId);
+        realtimeData.put("driverId", driverId);
+        realtimeData.put("pickupLocation", pickup);
+        realtimeData.put("destination", destination);
+        realtimeData.put("status", "pending");
+        realtimeData.put("people", people);
+        realtimeData.put("priceEach", priceEach);
+        realtimeData.put("timestamp", System.currentTimeMillis());
         
         // Create in Firestore
         DocumentReference rideRef = firestore.collection("rideRequests").document(rideId);
@@ -306,10 +318,10 @@ public class FirebaseService {
         // Create in Realtime Database for live updates
         DatabaseReference liveRideRef = realtimeDb.child("rideRequestsLive").child(rideId);
         
-        return rideRef.set(rideData)
+        return rideRef.set(firestoreData)
             .continueWithTask(task -> {
                 if (task.isSuccessful()) {
-                    return liveRideRef.setValue(rideData);
+                    return liveRideRef.setValue(realtimeData);
                 } else {
                     throw task.getException();
             }
