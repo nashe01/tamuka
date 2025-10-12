@@ -43,7 +43,8 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseFirestore mFirestore;
     
     // Splash screen display duration in milliseconds
-    private static final int SPLASH_DISPLAY_LENGTH = 1500; // 1.5 seconds
+    private static final int SPLASH_DISPLAY_LENGTH = 1500; // 1.5 seconds for new users
+    private static final int SPLASH_DISPLAY_LENGTH_LOGGED_IN = 200; // 0.2 seconds for logged-in users
 
     /**
      * Called when the activity is first created.
@@ -67,13 +68,17 @@ public class MainActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         mFirestore = FirebaseFirestore.getInstance();
 
-        // Show splash screen for a fixed duration, then check authentication
+        // Check if user is already logged in to determine splash screen duration
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        int splashDuration = (currentUser != null) ? SPLASH_DISPLAY_LENGTH_LOGGED_IN : SPLASH_DISPLAY_LENGTH;
+
+        // Show splash screen for appropriate duration, then check authentication
         new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
             @Override
             public void run() {
                 checkAuthenticationAndNavigate();
             }
-        }, SPLASH_DISPLAY_LENGTH);
+        }, splashDuration);
     }
 
     /**
