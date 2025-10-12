@@ -43,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseFirestore mFirestore;
     
     // Splash screen display duration in milliseconds
-    private static final int SPLASH_DISPLAY_LENGTH = 2000; // 2 seconds
+    private static final int SPLASH_DISPLAY_LENGTH = 1500; // 1.5 seconds
 
     /**
      * Called when the activity is first created.
