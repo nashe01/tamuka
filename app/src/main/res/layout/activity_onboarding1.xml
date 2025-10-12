@@ -7,13 +7,15 @@
   android:padding="24dp"
   tools:context=".ui.onboarding.Onboarding1Activity">
 
-  <TextView
+  <com.kodelink.glide.SimpleTypewriterTextView
     android:id="@+id/tvTitle1"
-    android:layout_width="0dp"
+    android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:text="Welcome to Swift Ride"
     android:textSize="24sp"
     android:textStyle="bold"
+    android:textColor="@color/primary"
+    android:layout_marginTop="35dp"
     app:layout_constraintStart_toStartOf="parent"
     app:layout_constraintEnd_toEndOf="parent"
     app:layout_constraintTop_toTopOf="parent"
@@ -35,9 +37,9 @@
     android:id="@+id/tvDescription1"
     android:layout_width="0dp"
     android:layout_height="wrap_content"
-    android:layout_marginTop="8dp"
+    android:layout_marginTop="16dp"
     android:layout_marginBottom="80dp"
-    android:text="Experience seamless transportation with Swift Ride. Whether you're looking for a ride or want to earn by driving, we've got you covered."
+    android:text="Experience seamless transportation with Swift Ride. Whether you're looking for a ride or want to earn by driving."
     android:textAlignment="center"
     android:textSize="16sp"
     android:lineSpacingExtra="4dp"
