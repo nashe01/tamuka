@@ -1,24 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Color Resources for Swift Ride Application
+    
+    This file defines the color palette used throughout the Swift Ride app.
+    Colors are organized by category and follow Material Design principles.
+    
+    Color Categories:
+    - Primary: Main brand colors (purple theme)
+    - Secondary: Accent colors (teal theme)
+    - Neutral: Black, white, and gray shades
+    - Status: Success (green) and error (red) colors
+-->
 <resources>
-    <color name="purple_500">#9C27B0</color>
-    <color name="purple_700">#7B1FA2</color>
-    <color name="teal_200">#03DAC5</color>
-    <color name="teal_700">#018786</color>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
-    <color name="primary">#6200EE</color>
-    <color name="primary_light">#BB86FC</color>
-    <color name="primary_dark">#3700B3</color>
-    <color name="accent">#03DAC5</color>
-    <color name="red">#F44336</color>
-    <color name="green">#4CAF50</color>
-    <color name="gray">#9E9E9E</color>
-    <color name="purple_100">#F3E5F5</color>
-    <color name="purple_300">#BA68C8</color>
-    <color name="purple_600">#8E24AA</color>
-    <color name="gray_100">#F5F5F5</color>
-    <color name="gray_200">#EEEEEE</color>
-    <color name="gray_300">#E0E0E0</color>
-    <color name="gray_400">#BDBDBD</color>
-    <color name="gray_600">#757575</color>
+    <!-- Primary Brand Colors - Purple Theme -->
+    <color name="purple_500">#68439D</color>    <!-- Main brand color -->
+    <color name="purple_700">#5A3A8A</color>    <!-- Darker purple for emphasis -->
+    <color name="purple_600">#6240A0</color>    <!-- Medium purple -->
+    <color name="purple_300">#8B6BB1</color>    <!-- Light purple -->
+    <color name="purple_100">#F0EBF5</color>    <!-- Very light purple background -->
+    
+    <!-- Secondary Accent Colors - Teal Theme -->
+    <color name="teal_200">#03DAC5</color>      <!-- Light teal accent -->
+    <color name="teal_700">#018786</color>      <!-- Dark teal -->
+    
+    <!-- Material Design Primary Colors -->
+    <color name="primary">#68439D</color>       <!-- Primary color -->
+    <color name="primary_light">#8B6BB1</color> <!-- Light primary -->
+    <color name="primary_dark">#5A3A8A</color>  <!-- Dark primary -->
+    <color name="accent">#03DAC5</color>        <!-- Accent color -->
+    
+    <!-- Basic Colors -->
+    <color name="black">#FF000000</color>       <!-- Pure black -->
+    <color name="white">#FFFFFFFF</color>       <!-- Pure white -->
+    
+    <!-- Status Colors -->
+    <color name="red">#F44336</color>           <!-- Error/decline color -->
+    <color name="green">#4CAF50</color>         <!-- Success/accept color -->
+    
+    <!-- Neutral Gray Scale -->
+    <color name="gray">#9E9E9E</color>          <!-- Standard gray -->
+    <color name="gray_100">#F5F5F5</color>      <!-- Very light gray background -->
+    <color name="gray_200">#EEEEEE</color>      <!-- Light gray border -->
+    <color name="gray_300">#E0E0E0</color>      <!-- Medium light gray -->
+    <color name="gray_400">#BDBDBD</color>      <!-- Medium gray -->
+    <color name="gray_600">#757575</color>      <!-- Dark gray text -->
 </resources>

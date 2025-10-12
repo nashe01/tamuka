@@ -1,4 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Home Commuter Activity Layout
+    
+    This layout defines the main interface for commuters in the Swift Ride app.
+    It includes:
+    - Full-screen Google Maps view for driver location display
+    - Navigation drawer for menu access
+    - Search bar for destination input
+    - Sliding driver selection card
+    - Ride request sent confirmation card
+    
+    Layout Structure:
+    - DrawerLayout (root) - Enables navigation drawer functionality
+    - ConstraintLayout (main content) - Contains map and UI elements
+    - NavigationView - Side menu with user profile and options
+-->
 <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"

@@ -10,10 +10,11 @@
 
   <ImageView
     android:id="@+id/ivLogo"
-    android:layout_width="120dp"
-    android:layout_height="120dp"
+    android:layout_width="200dp"
+    android:layout_height="200dp"
     android:contentDescription="@string/app_name"
-    android:src="@mipmap/ic_launcher"
+    android:src="@drawable/app_logo"
+    android:scaleType="centerInside"
     app:layout_constraintBottom_toBottomOf="parent"
     app:layout_constraintEnd_toEndOf="parent"
     app:layout_constraintStart_toStartOf="parent"

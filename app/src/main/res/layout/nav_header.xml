@@ -12,7 +12,7 @@
         android:layout_width="64dp"
         android:layout_height="64dp"
         android:layout_marginBottom="8dp"
-        android:src="@mipmap/ic_launcher"
+        android:src="@drawable/app_logo"
         android:background="@drawable/circle_background"
         android:padding="8dp" />
 
@@ -20,7 +20,7 @@
         android:id="@+id/tvUserName"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Glide"
+        android:text="Swift Ride"
         android:textColor="@color/white"
         android:textSize="18sp"
         android:textStyle="bold" />
