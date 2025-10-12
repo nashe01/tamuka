@@ -19,6 +19,14 @@ public class SimpleTypewriterTextView extends AppCompatTextView {
     private int delay = 100; // milliseconds per character
     private String textToType = "";
     private int currentIndex = 0;
+    private TypewriterCallback callback;
+    
+    /**
+     * Callback interface for typewriter animation events
+     */
+    public interface TypewriterCallback {
+        void onAnimationComplete();
+    }
     
     public SimpleTypewriterTextView(Context context) {
         super(context);
@@ -34,6 +42,10 @@ public class SimpleTypewriterTextView extends AppCompatTextView {
     
     public void setTypingDelay(int delayMs) {
         this.delay = delayMs;
+    }
+    
+    public void setTypewriterCallback(TypewriterCallback callback) {
+        this.callback = callback;
     }
     
     public void setTypewriterText(String text) {
@@ -61,6 +73,11 @@ public class SimpleTypewriterTextView extends AppCompatTextView {
                     typeNextChar();
                 }
             }, delay);
+        } else {
+            // Animation complete - notify callback
+            if (callback != null) {
+                callback.onAnimationComplete();
+            }
         }
     }
 }
