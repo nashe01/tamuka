@@ -2,21 +2,19 @@ package com.kodelink.glide;
 
 public class Commuter {
     public String commuterId;
+    public String uid; // Firebase Auth UID
     public String name;
-    public String phone;
     public LocationData currentLocation;
-    public String ongoingRideId;
 
     public Commuter() {
         // Default constructor required for Firebase
     }
 
-    public Commuter(String commuterId, String name, String phone, LocationData currentLocation) {
+    public Commuter(String commuterId, String uid, String name, LocationData currentLocation) {
         this.commuterId = commuterId;
+        this.uid = uid;
         this.name = name;
-        this.phone = phone;
         this.currentLocation = currentLocation;
-        this.ongoingRideId = null;
     }
 
     public static class LocationData {
