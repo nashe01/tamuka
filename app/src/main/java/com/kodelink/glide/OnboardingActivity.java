@@ -63,6 +63,7 @@ public class OnboardingActivity extends AppCompatActivity implements View.OnClic
      * Initialize typewriter animation for screen 1
      */
     private void initializeScreen1Animation() {
+        // Animate title
         SimpleTypewriterTextView tvTitle1 = findViewById(R.id.tvTitle1);
         if (tvTitle1 != null) {
             tvTitle1.setTypingDelay(TYPING_SPEED);
@@ -74,12 +75,26 @@ public class OnboardingActivity extends AppCompatActivity implements View.OnClic
                 regularTextView.setText("Welcome to Swift Ride");
             }
         }
+        
+        // Animate description
+        SimpleTypewriterTextView tvDescription1 = findViewById(R.id.tvDescription1);
+        if (tvDescription1 != null) {
+            tvDescription1.setTypingDelay(TYPING_SPEED);
+            tvDescription1.setTypewriterText("Experience seamless transportation with Swift Ride. Whether you're looking for a ride or want to earn by driving.");
+        } else {
+            // Fallback: if SimpleTypewriterTextView fails, use regular TextView
+            android.widget.TextView regularTextView = findViewById(R.id.tvDescription1);
+            if (regularTextView != null) {
+                regularTextView.setText("Experience seamless transportation with Swift Ride. Whether you're looking for a ride or want to earn by driving.");
+            }
+        }
     }
     
     /**
      * Initialize typewriter animation for screen 2
      */
     private void initializeScreen2Animation() {
+        // Animate title
         SimpleTypewriterTextView tvTitle2 = findViewById(R.id.tvTitle2);
         if (tvTitle2 != null) {
             tvTitle2.setTypingDelay(TYPING_SPEED);
@@ -91,12 +106,26 @@ public class OnboardingActivity extends AppCompatActivity implements View.OnClic
                 regularTextView.setText("Live Location Tracking");
             }
         }
+        
+        // Animate description
+        SimpleTypewriterTextView tvDescription2 = findViewById(R.id.tvDescription2);
+        if (tvDescription2 != null) {
+            tvDescription2.setTypingDelay(TYPING_SPEED);
+            tvDescription2.setTypewriterText("Stay connected with real-time location tracking. See exactly where your driver is and get accurate arrival times for peace of mind throughout your journey.");
+        } else {
+            // Fallback: if SimpleTypewriterTextView fails, use regular TextView
+            android.widget.TextView regularTextView = findViewById(R.id.tvDescription2);
+            if (regularTextView != null) {
+                regularTextView.setText("Stay connected with real-time location tracking. See exactly where your driver is and get accurate arrival times for peace of mind throughout your journey.");
+            }
+        }
     }
     
     /**
      * Initialize typewriter animation for screen 3
      */
     private void initializeScreen3Animation() {
+        // Animate title
         SimpleTypewriterTextView tvTitle3 = findViewById(R.id.tvTitle3);
         if (tvTitle3 != null) {
             tvTitle3.setTypingDelay(TYPING_SPEED);
@@ -106,6 +135,19 @@ public class OnboardingActivity extends AppCompatActivity implements View.OnClic
             android.widget.TextView regularTextView = findViewById(R.id.tvTitle3);
             if (regularTextView != null) {
                 regularTextView.setText("Join Swift Ride Today");
+            }
+        }
+        
+        // Animate description
+        SimpleTypewriterTextView tvDescription3 = findViewById(R.id.tvDescription3);
+        if (tvDescription3 != null) {
+            tvDescription3.setTypingDelay(TYPING_SPEED);
+            tvDescription3.setTypewriterText("Ready to get started? Join thousands of users who trust Swift Ride for their daily transportation needs!");
+        } else {
+            // Fallback: if SimpleTypewriterTextView fails, use regular TextView
+            android.widget.TextView regularTextView = findViewById(R.id.tvDescription3);
+            if (regularTextView != null) {
+                regularTextView.setText("Ready to get started? Join thousands of users who trust Swift Ride for their daily transportation needs!");
             }
         }
     }

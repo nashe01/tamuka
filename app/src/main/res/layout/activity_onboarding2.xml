@@ -32,13 +32,13 @@
     app:layout_constraintStart_toStartOf="parent"
     app:layout_constraintEnd_toEndOf="parent" />
 
-  <TextView
+  <com.kodelink.glide.SimpleTypewriterTextView
     android:id="@+id/tvDescription2"
     android:layout_width="0dp"
     android:layout_height="wrap_content"
     android:layout_marginTop="16dp"
     android:layout_marginBottom="80dp"
-    android:text="Stay connected with real-time location tracking. See exactly where your driver is and get accurate arrival times for peace of mind throughout your journey."
+    android:text=""
     android:textAlignment="center"
     android:textSize="16sp"
     android:lineSpacingExtra="4dp"
