@@ -9,11 +9,12 @@
 
   <TextView
     android:id="@+id/tvTitle3"
-    android:layout_width="0dp"
+    android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:text="Join Swift Ride Today"
     android:textSize="24sp"
     android:textStyle="bold"
+    android:layout_marginTop="35dp"
     app:layout_constraintStart_toStartOf="parent"
     app:layout_constraintEnd_toEndOf="parent"
     app:layout_constraintTop_toTopOf="parent" />
@@ -34,7 +35,7 @@
     android:id="@+id/tvDescription3"
     android:layout_width="0dp"
     android:layout_height="wrap_content"
-    android:layout_marginTop="8dp"
+    android:layout_marginTop="16dp"
     android:layout_marginBottom="80dp"
     android:text="Ready to get started? Join thousands of users who trust Swift Ride for their daily transportation needs!"
     android:textAlignment="center"

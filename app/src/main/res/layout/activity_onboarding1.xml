@@ -36,7 +36,7 @@
     android:id="@+id/tvDescription1"
     android:layout_width="0dp"
     android:layout_height="wrap_content"
-    android:layout_marginTop="8dp"
+    android:layout_marginTop="16dp"
     android:layout_marginBottom="80dp"
     android:text="Experience seamless transportation with Swift Ride. Whether you're looking for a ride or want to earn by driving."
     android:textAlignment="center"
