@@ -29,7 +29,7 @@ public class OnboardingActivity extends AppCompatActivity implements View.OnClic
     private int currentStep = 1;
     
     // Typewriter animation speed (milliseconds per character)
-    private static final int TYPING_SPEED = 40;
+    private static final int TYPING_SPEED = 50;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
