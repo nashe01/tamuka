@@ -41,11 +41,14 @@ public class MainActivity extends AppCompatActivity {
     
     // Firestore database instance for user data retrieval
     private FirebaseFirestore mFirestore;
+    
+    // Splash screen display duration in milliseconds
+    private static final int SPLASH_DISPLAY_LENGTH = 2000; // 2 seconds
 
     /**
      * Called when the activity is first created.
      * Sets up the splash screen layout and initializes Firebase services.
-     * Performs immediate authentication check to determine user flow.
+     * Shows splash screen for a fixed duration before checking authentication.
      * 
      * @param savedInstanceState Previously saved state data
      */
@@ -64,18 +67,31 @@ public class MainActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         mFirestore = FirebaseFirestore.getInstance();
 
-        // Check authentication status immediately for seamless user experience
+        // Show splash screen for a fixed duration, then check authentication
+        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                checkAuthenticationAndNavigate();
+            }
+        }, SPLASH_DISPLAY_LENGTH);
+    }
+
+    /**
+     * Checks authentication status and navigates to appropriate screen.
+     * This method is called after the splash screen delay.
+     */
+    private void checkAuthenticationAndNavigate() {
         try {
             FirebaseUser currentUser = mAuth.getCurrentUser();
             if (currentUser != null) {
-                // User is already logged in - check role and navigate directly
+                // User is already logged in - check role and navigate
                 checkUserRoleAndNavigate(currentUser.getUid());
             } else {
-                // Not logged in - go to onboarding immediately
+                // Not logged in - go to onboarding
                 navigateToOnboarding();
             }
         } catch (Exception e) {
-            // If there's any error with authentication, go to onboarding immediately
+            // If there's any error with authentication, go to onboarding
             Toast.makeText(this, "Authentication error, please login again", Toast.LENGTH_SHORT).show();
             navigateToOnboarding();
         }
