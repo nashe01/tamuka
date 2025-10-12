@@ -13,20 +13,20 @@
 -->
 <resources>
     <!-- Primary Brand Colors - Purple Theme -->
-    <color name="purple_500">#9C27B0</color>    <!-- Main brand color -->
-    <color name="purple_700">#7B1FA2</color>    <!-- Darker purple for emphasis -->
-    <color name="purple_600">#8E24AA</color>    <!-- Medium purple -->
-    <color name="purple_300">#BA68C8</color>    <!-- Light purple -->
-    <color name="purple_100">#F3E5F5</color>    <!-- Very light purple background -->
+    <color name="purple_500">#68439D</color>    <!-- Main brand color -->
+    <color name="purple_700">#5A3A8A</color>    <!-- Darker purple for emphasis -->
+    <color name="purple_600">#6240A0</color>    <!-- Medium purple -->
+    <color name="purple_300">#8B6BB1</color>    <!-- Light purple -->
+    <color name="purple_100">#F0EBF5</color>    <!-- Very light purple background -->
     
     <!-- Secondary Accent Colors - Teal Theme -->
     <color name="teal_200">#03DAC5</color>      <!-- Light teal accent -->
     <color name="teal_700">#018786</color>      <!-- Dark teal -->
     
     <!-- Material Design Primary Colors -->
-    <color name="primary">#6200EE</color>       <!-- Primary color -->
-    <color name="primary_light">#BB86FC</color> <!-- Light primary -->
-    <color name="primary_dark">#3700B3</color>  <!-- Dark primary -->
+    <color name="primary">#68439D</color>       <!-- Primary color -->
+    <color name="primary_light">#8B6BB1</color> <!-- Light primary -->
+    <color name="primary_dark">#5A3A8A</color>  <!-- Dark primary -->
     <color name="accent">#03DAC5</color>        <!-- Accent color -->
     
     <!-- Basic Colors -->
