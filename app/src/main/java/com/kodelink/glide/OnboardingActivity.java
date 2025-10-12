@@ -80,10 +80,16 @@ public class OnboardingActivity extends AppCompatActivity implements View.OnClic
      * Initialize typewriter animation for screen 2
      */
     private void initializeScreen2Animation() {
-        TypewriterTextView tvTitle2 = findViewById(R.id.tvTitle2);
+        SimpleTypewriterTextView tvTitle2 = findViewById(R.id.tvTitle2);
         if (tvTitle2 != null) {
             tvTitle2.setTypingDelay(TYPING_SPEED);
             tvTitle2.setTypewriterText("Live Location Tracking");
+        } else {
+            // Fallback: if SimpleTypewriterTextView fails, use regular TextView
+            android.widget.TextView regularTextView = findViewById(R.id.tvTitle2);
+            if (regularTextView != null) {
+                regularTextView.setText("Live Location Tracking");
+            }
         }
     }
     
@@ -91,10 +97,16 @@ public class OnboardingActivity extends AppCompatActivity implements View.OnClic
      * Initialize typewriter animation for screen 3
      */
     private void initializeScreen3Animation() {
-        TypewriterTextView tvTitle3 = findViewById(R.id.tvTitle3);
+        SimpleTypewriterTextView tvTitle3 = findViewById(R.id.tvTitle3);
         if (tvTitle3 != null) {
             tvTitle3.setTypingDelay(TYPING_SPEED);
             tvTitle3.setTypewriterText("Join Swift Ride Today");
+        } else {
+            // Fallback: if SimpleTypewriterTextView fails, use regular TextView
+            android.widget.TextView regularTextView = findViewById(R.id.tvTitle3);
+            if (regularTextView != null) {
+                regularTextView.setText("Join Swift Ride Today");
+            }
         }
     }
 

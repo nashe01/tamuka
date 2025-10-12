@@ -7,11 +7,11 @@
   android:padding="24dp"
   tools:context=".ui.onboarding.Onboarding2Activity">
 
-  <com.kodelink.glide.TypewriterTextView
+  <com.kodelink.glide.SimpleTypewriterTextView
     android:id="@+id/tvTitle2"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:text="Live Location Tracking"
+    android:text=""
     android:textSize="24sp"
     android:textStyle="bold"
     android:textColor="@color/primary"
