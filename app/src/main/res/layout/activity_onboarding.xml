@@ -55,7 +55,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="2dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toTopOf="@id/groupButtons">
@@ -64,7 +64,7 @@
             android:id="@+id/indicator1"
             android:layout_width="8dp"
             android:layout_height="8dp"
-            android:layout_margin="4dp"
+            android:layout_margin="2dp"
             android:background="@drawable/indicator_active"
             android:layout_gravity="center" />
 
