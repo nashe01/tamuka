@@ -1,20 +1,23 @@
+// Swift Ride App Build Configuration
+// This file defines the build settings, dependencies, and configuration for the Swift Ride Android application
+
 plugins {
     alias(libs.plugins.android.application)
-    // Add the Google services Gradle plugin
+    // Google services plugin for Firebase integration
     id("com.google.gms.google-services")
-
 }
 
 android {
     namespace = "com.kodelink.glide"
     compileSdk = 36
 
+    // Application configuration
     defaultConfig {
         applicationId = "com.kodelink.glide"
-        minSdk = 24
-        targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        minSdk = 24        // Minimum Android API level (Android 7.0)
+        targetSdk = 35     // Target Android API level (Android 14)
+        versionCode = 1    // Internal version number
+        versionName = "1.0" // User-visible version name
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -34,26 +37,28 @@ android {
     }
 }
 
+// Project dependencies
 dependencies {
-
-    implementation(libs.appcompat)
-    implementation(libs.material)
-    implementation(libs.activity)
-    implementation(libs.constraintlayout)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.ext.junit)
-    androidTestImplementation(libs.espresso.core)
-    // Import the Firebase BoM
-    implementation(platform(libs.firebase.bom))
-    // Firebase products (versions via BoM)
-    implementation(libs.firebase.analytics)
-    implementation(libs.firebase.auth)
-    implementation(libs.firebase.database)
-    implementation(libs.firebase.firestore)
+    // AndroidX core libraries
+    implementation(libs.appcompat)           // AppCompat for backward compatibility
+    implementation(libs.material)            // Material Design components
+    implementation(libs.activity)            // Activity library
+    implementation(libs.constraintlayout)    // ConstraintLayout for flexible layouts
     
-    // Google Maps dependencies
-    implementation("com.google.android.gms:play-services-maps:18.1.0")
-    implementation("com.google.android.gms:play-services-location:21.0.1")
-    implementation("com.google.android.libraries.places:places:3.4.0")
-
+    // Testing dependencies
+    testImplementation(libs.junit)           // Unit testing framework
+    androidTestImplementation(libs.ext.junit) // Android JUnit extensions
+    androidTestImplementation(libs.espresso.core) // UI testing framework
+    
+    // Firebase dependencies
+    implementation(platform(libs.firebase.bom)) // Firebase Bill of Materials for version management
+    implementation(libs.firebase.analytics)     // Firebase Analytics
+    implementation(libs.firebase.auth)          // Firebase Authentication
+    implementation(libs.firebase.database)      // Firebase Realtime Database
+    implementation(libs.firebase.firestore)     // Firebase Firestore
+    
+    // Google Play Services for Maps and Location
+    implementation("com.google.android.gms:play-services-maps:18.1.0")        // Google Maps SDK
+    implementation("com.google.android.gms:play-services-location:21.0.1")    // Location services
+    implementation("com.google.android.libraries.places:places:3.4.0")        // Places API for location search
 }
