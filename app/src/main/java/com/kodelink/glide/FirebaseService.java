@@ -1,16 +1,24 @@
 package com.kodelink.glide;
 
+// Android logging utility
 import android.util.Log;
 
+// Google Play Services task management
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
+
+// Firebase Authentication imports
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
+
+// Firebase Realtime Database imports
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+
+// Firebase Firestore imports
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
@@ -19,25 +27,61 @@ import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.firestore.WriteBatch;
 
+// Java collections and utilities
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * FirebaseService - Centralized service for all Firebase operations
+ * 
+ * This singleton service handles all interactions with Firebase services including:
+ * - Firebase Authentication for user management
+ * - Firestore for persistent data storage (user profiles, ride history)
+ * - Realtime Database for live data (driver locations, ride requests)
+ * 
+ * Key Features:
+ * - User authentication and registration
+ * - Driver and commuter profile management
+ * - Real-time driver location tracking
+ * - Ride request creation and management
+ * - Ride history retrieval
+ * - Database synchronization between Firestore and Realtime Database
+ * 
+ * Database Structure:
+ * - Firestore: Users, drivers, commuters, vehicles, ride_history
+ * - Realtime Database: driver_locations, ride_requests
+ * 
+ * @author Swift Ride Development Team
+ * @version 1.0
+ */
 public class FirebaseService {
+    // Logging tag for debugging
     private static final String TAG = "FirebaseService";
+    
+    // Singleton instance
     private static FirebaseService instance;
     
-    private FirebaseAuth auth;
-    private FirebaseFirestore firestore;
-    private DatabaseReference realtimeDb;
+    // Firebase service instances
+    private FirebaseAuth auth;                  // Authentication service
+    private FirebaseFirestore firestore;        // Firestore database service
+    private DatabaseReference realtimeDb;       // Realtime database reference
 
+    /**
+     * Private constructor for singleton pattern
+     * Initializes all Firebase services
+     */
     private FirebaseService() {
         auth = FirebaseAuth.getInstance();
         firestore = FirebaseFirestore.getInstance();
         realtimeDb = FirebaseDatabase.getInstance("https://glide-77761-default-rtdb.firebaseio.com/").getReference();
     }
 
+    /**
+     * Gets the singleton instance of FirebaseService
+     * @return FirebaseService instance
+     */
     public static FirebaseService getInstance() {
         if (instance == null) {
             instance = new FirebaseService();

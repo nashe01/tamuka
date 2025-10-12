@@ -17,11 +17,38 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+/**
+ * MainActivity - Entry point of the Swift Ride application
+ * 
+ * This activity serves as the splash screen and authentication gateway.
+ * It checks if a user is already logged in and navigates them to the appropriate
+ * screen based on their role (commuter or driver). If no user is logged in,
+ * it redirects to the onboarding flow.
+ * 
+ * Key Features:
+ * - Automatic authentication check on app launch
+ * - Role-based navigation (commuter vs driver)
+ * - Error handling for authentication failures
+ * - Seamless user experience for returning users
+ * 
+ * @author Swift Ride Development Team
+ * @version 1.0
+ */
 public class MainActivity extends AppCompatActivity {
 
+    // Firebase authentication instance for user management
     private FirebaseAuth mAuth;
+    
+    // Firestore database instance for user data retrieval
     private FirebaseFirestore mFirestore;
 
+    /**
+     * Called when the activity is first created.
+     * Sets up the splash screen layout and initializes Firebase services.
+     * Performs immediate authentication check to determine user flow.
+     * 
+     * @param savedInstanceState Previously saved state data
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -33,11 +60,11 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
 
-        // Initialize Firebase
+        // Initialize Firebase authentication and Firestore database
         mAuth = FirebaseAuth.getInstance();
         mFirestore = FirebaseFirestore.getInstance();
 
-        // Check authentication immediately without delay for logged-in users
+        // Check authentication status immediately for seamless user experience
         try {
             FirebaseUser currentUser = mAuth.getCurrentUser();
             if (currentUser != null) {
@@ -54,6 +81,12 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Checks the user's role in Firestore and navigates to the appropriate activity.
+     * Handles role-based routing for commuters and drivers.
+     * 
+     * @param userId The Firebase user ID to check role for
+     */
     private void checkUserRoleAndNavigate(String userId) {
         try {
             // Check user role in Firestore
@@ -104,6 +137,10 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Navigates to the onboarding activity for new or unauthenticated users.
+     * This is the entry point for the user registration/login flow.
+     */
     private void navigateToOnboarding() {
         Intent intent = new Intent(MainActivity.this, OnboardingActivity.class);
         startActivity(intent);

@@ -1,19 +1,35 @@
+<!--
+    String Resources for Swift Ride Application
+    
+    This file contains all user-facing text strings used throughout the app.
+    Strings are organized by feature/screen for easy maintenance and localization.
+    
+    Categories:
+    - App branding and general UI
+    - Onboarding flow text
+    - Authentication screens
+    - Profile management
+    - API keys and technical strings
+-->
 <resources>
+    <!-- App Branding -->
     <string name="app_name">Swift Ride</string>
     <string name="splash_logo_desc">App logo</string>
 
-    <!-- Onboarding -->
+    <!-- Onboarding Screen Text -->
     <string name="onb1_title">Welcome to Swift Ride</string>
     <string name="onb1_desc">Your journey made simple.</string>
     <string name="onb2_title">Real-time Tracking</string>
     <string name="onb2_desc">Track rides and arrivals effortlessly.</string>
     <string name="onb3_title">Get Started</string>
     <string name="onb3_desc">Create your account to ride or drive.</string>
+    
+    <!-- Onboarding Actions -->
     <string name="action_skip">Skip</string>
     <string name="action_next">Next</string>
     <string name="action_get_started">Get Started</string>
 
-    <!-- Auth -->
+    <!-- Authentication Screen Text -->
     <string name="login_title">Login</string>
     <string name="hint_email_phone">Email or Phone</string>
     <string name="hint_password">Password</string>
@@ -28,7 +44,7 @@
     <string name="action_back_to_login">Back to Login</string>
     <string name="label_role">Role</string>
 
-    <!-- Profile -->
+    <!-- Profile Management Text -->
     <string name="upload_photo">Upload Photo</string>
     <string name="save">Save</string>
     <string name="profile_picture_desc">Profile picture</string>
@@ -37,9 +53,9 @@
     <string name="car_plate">Plate Number</string>
     <string name="upload_license">Upload License</string>
     
-    <!-- Google Maps API Key -->
+    <!-- API Keys and Technical Strings -->
     <string name="google_maps_key">AIzaSyBt2-fYTHTDZYdXMQ7CH7Ho35To3h1OhuY</string>
     
-    <!-- AppBar Scrolling Behavior -->
+    <!-- Material Design Behavior Classes -->
     <string name="appbar_scrolling_view_behavior">com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior</string>
 </resources>

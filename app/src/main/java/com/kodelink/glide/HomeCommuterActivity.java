@@ -1,5 +1,6 @@
 package com.kodelink.glide;
 
+// Android core imports for permissions, location, and UI components
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
@@ -22,6 +23,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import com.google.android.material.textfield.TextInputEditText;
 
+// AndroidX support library imports
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -29,6 +31,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
+// Google Play Services imports for location and maps
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -41,6 +44,8 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+
+// Google Places API imports for location autocomplete
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.AutocompletePrediction;
 import com.google.android.libraries.places.api.model.AutocompleteSessionToken;
@@ -71,22 +76,55 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+/**
+ * HomeCommuterActivity - Main activity for commuters in the Swift Ride app
+ * 
+ * This is the primary interface for commuters to:
+ * - View available drivers on an interactive map
+ * - Search for destinations using Google Places API
+ * - Select drivers and request rides
+ * - View ride history and manage profile
+ * - Navigate through the app using a side drawer menu
+ * 
+ * Key Features:
+ * - Real-time driver location display on Google Maps
+ * - Interactive driver selection with sliding cards
+ * - Destination search with autocomplete suggestions
+ * - Ride request management with input validation
+ * - Navigation drawer with user profile and ride history
+ * - Smooth animations for UI interactions
+ * 
+ * Technical Implementation:
+ * - Uses Google Maps API for map display and interactions
+ * - Integrates Google Places API for location search
+ * - Firebase Realtime Database for live driver updates
+ * - Firebase Firestore for persistent data storage
+ * - Material Design components for modern UI
+ * 
+ * @author Swift Ride Development Team
+ * @version 1.0
+ */
 public class HomeCommuterActivity extends AppCompatActivity implements OnMapReadyCallback, NavigationView.OnNavigationItemSelectedListener, GoogleMap.OnMapLongClickListener {
 
+    // Permission request code for location access
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
-    private MapView mapView;
-    private GoogleMap googleMap;
-    private FusedLocationProviderClient fusedLocationClient;
-    private ImageButton btnMenu;
-    private TextInputEditText etSearch;
-    private TextInputLayout searchLayout;
-    private DrawerLayout drawerLayout;
-    private NavigationView navigationView;
+    
+    // Map-related components
+    private MapView mapView;                    // Map view container
+    private GoogleMap googleMap;                // Google Maps instance
+    private FusedLocationProviderClient fusedLocationClient;  // Location services client
+    // UI components for navigation and search
+    private ImageButton btnMenu;                // Menu button to open navigation drawer
+    private TextInputEditText etSearch;         // Search input field for destinations
+    private TextInputLayout searchLayout;       // Search input layout container
+    private DrawerLayout drawerLayout;          // Navigation drawer layout
+    private NavigationView navigationView;      // Navigation drawer view
+    // Shared preferences for storing user data
     private SharedPreferences prefs;
     
-    // Places API variables
-    private PlacesClient placesClient;
-    private AutocompleteSessionToken sessionToken;
+    // Google Places API components
+    private PlacesClient placesClient;          // Places API client for location search
+    private AutocompleteSessionToken sessionToken;  // Session token for autocomplete requests
     
     // Suggestions UI
     private RecyclerView rvSuggestions;
