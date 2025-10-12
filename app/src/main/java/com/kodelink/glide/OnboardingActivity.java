@@ -63,10 +63,17 @@ public class OnboardingActivity extends AppCompatActivity implements View.OnClic
      * Initialize typewriter animation for screen 1
      */
     private void initializeScreen1Animation() {
-        // Animate title
+        // Animate title first
         SimpleTypewriterTextView tvTitle1 = findViewById(R.id.tvTitle1);
         if (tvTitle1 != null) {
             tvTitle1.setTypingDelay(TYPING_SPEED);
+            tvTitle1.setTypewriterCallback(new SimpleTypewriterTextView.TypewriterCallback() {
+                @Override
+                public void onAnimationComplete() {
+                    // Start description animation after title completes
+                    startDescription1Animation();
+                }
+            });
             tvTitle1.setTypewriterText("Welcome to Swift Ride");
         } else {
             // Fallback: if SimpleTypewriterTextView fails, use regular TextView
@@ -74,9 +81,15 @@ public class OnboardingActivity extends AppCompatActivity implements View.OnClic
             if (regularTextView != null) {
                 regularTextView.setText("Welcome to Swift Ride");
             }
+            // Start description immediately if title fails
+            startDescription1Animation();
         }
-        
-        // Animate description
+    }
+    
+    /**
+     * Start description animation for screen 1
+     */
+    private void startDescription1Animation() {
         SimpleTypewriterTextView tvDescription1 = findViewById(R.id.tvDescription1);
         if (tvDescription1 != null) {
             tvDescription1.setTypingDelay(TYPING_SPEED);
@@ -94,10 +107,17 @@ public class OnboardingActivity extends AppCompatActivity implements View.OnClic
      * Initialize typewriter animation for screen 2
      */
     private void initializeScreen2Animation() {
-        // Animate title
+        // Animate title first
         SimpleTypewriterTextView tvTitle2 = findViewById(R.id.tvTitle2);
         if (tvTitle2 != null) {
             tvTitle2.setTypingDelay(TYPING_SPEED);
+            tvTitle2.setTypewriterCallback(new SimpleTypewriterTextView.TypewriterCallback() {
+                @Override
+                public void onAnimationComplete() {
+                    // Start description animation after title completes
+                    startDescription2Animation();
+                }
+            });
             tvTitle2.setTypewriterText("Live Location Tracking");
         } else {
             // Fallback: if SimpleTypewriterTextView fails, use regular TextView
@@ -105,9 +125,15 @@ public class OnboardingActivity extends AppCompatActivity implements View.OnClic
             if (regularTextView != null) {
                 regularTextView.setText("Live Location Tracking");
             }
+            // Start description immediately if title fails
+            startDescription2Animation();
         }
-        
-        // Animate description
+    }
+    
+    /**
+     * Start description animation for screen 2
+     */
+    private void startDescription2Animation() {
         SimpleTypewriterTextView tvDescription2 = findViewById(R.id.tvDescription2);
         if (tvDescription2 != null) {
             tvDescription2.setTypingDelay(TYPING_SPEED);
@@ -125,10 +151,17 @@ public class OnboardingActivity extends AppCompatActivity implements View.OnClic
      * Initialize typewriter animation for screen 3
      */
     private void initializeScreen3Animation() {
-        // Animate title
+        // Animate title first
         SimpleTypewriterTextView tvTitle3 = findViewById(R.id.tvTitle3);
         if (tvTitle3 != null) {
             tvTitle3.setTypingDelay(TYPING_SPEED);
+            tvTitle3.setTypewriterCallback(new SimpleTypewriterTextView.TypewriterCallback() {
+                @Override
+                public void onAnimationComplete() {
+                    // Start description animation after title completes
+                    startDescription3Animation();
+                }
+            });
             tvTitle3.setTypewriterText("Join Swift Ride Today");
         } else {
             // Fallback: if SimpleTypewriterTextView fails, use regular TextView
@@ -136,9 +169,15 @@ public class OnboardingActivity extends AppCompatActivity implements View.OnClic
             if (regularTextView != null) {
                 regularTextView.setText("Join Swift Ride Today");
             }
+            // Start description immediately if title fails
+            startDescription3Animation();
         }
-        
-        // Animate description
+    }
+    
+    /**
+     * Start description animation for screen 3
+     */
+    private void startDescription3Animation() {
         SimpleTypewriterTextView tvDescription3 = findViewById(R.id.tvDescription3);
         if (tvDescription3 != null) {
             tvDescription3.setTypingDelay(TYPING_SPEED);
