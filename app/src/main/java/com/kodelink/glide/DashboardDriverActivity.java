@@ -955,9 +955,12 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
     private void createTestRideRequests() {
         Log.d("RideRequests", "Creating test ride requests...");
         
-        // Create test ride request 1
-        RideRequest.LocationData pickup1 = new RideRequest.LocationData(-17.82486, 31.05343, "Test Pickup 1");
-        RideRequest.LocationData dest1 = new RideRequest.LocationData(-17.82765, 31.05612, "Test Destination 1");
+        // Clear existing test data first
+        pendingRideRequests.clear();
+        
+        // Create test ride request 1 - Zengeza 1
+        RideRequest.LocationData pickup1 = new RideRequest.LocationData(-17.82486, 31.05343, "Zengeza 1, Chitungwiza");
+        RideRequest.LocationData dest1 = new RideRequest.LocationData(-17.82765, 31.05612, "Harare CBD");
         
         RideRequest testRide1 = new RideRequest();
         testRide1.rideId = "test_ride_1";
@@ -970,9 +973,9 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
         testRide1.priceEach = 5.50;
         testRide1.timestamp = System.currentTimeMillis();
         
-        // Create test ride request 2
-        RideRequest.LocationData pickup2 = new RideRequest.LocationData(-17.82000, 31.05000, "Test Pickup 2");
-        RideRequest.LocationData dest2 = new RideRequest.LocationData(-17.83000, 31.06000, "Test Destination 2");
+        // Create test ride request 2 - Zengeza 2
+        RideRequest.LocationData pickup2 = new RideRequest.LocationData(-17.82000, 31.05000, "Zengeza 2, Chitungwiza");
+        RideRequest.LocationData dest2 = new RideRequest.LocationData(-17.83000, 31.06000, "Eastlea, Harare");
         
         RideRequest testRide2 = new RideRequest();
         testRide2.rideId = "test_ride_2";
@@ -985,11 +988,59 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
         testRide2.priceEach = 4.00;
         testRide2.timestamp = System.currentTimeMillis();
         
+        // Create test ride request 3 - Zengeza 3
+        RideRequest.LocationData pickup3 = new RideRequest.LocationData(-17.81500, 31.04500, "Zengeza 3, Chitungwiza");
+        RideRequest.LocationData dest3 = new RideRequest.LocationData(-17.82500, 31.05500, "Avondale, Harare");
+        
+        RideRequest testRide3 = new RideRequest();
+        testRide3.rideId = "test_ride_3";
+        testRide3.commuterId = "test_commuter_3";
+        testRide3.driverId = "test_driver_3";
+        testRide3.pickupLocation = pickup3;
+        testRide3.destination = dest3;
+        testRide3.status = "pending";
+        testRide3.people = 3;
+        testRide3.priceEach = 6.00;
+        testRide3.timestamp = System.currentTimeMillis();
+        
+        // Create test ride request 4 - Zengeza 4
+        RideRequest.LocationData pickup4 = new RideRequest.LocationData(-17.81000, 31.04000, "Zengeza 4, Chitungwiza");
+        RideRequest.LocationData dest4 = new RideRequest.LocationData(-17.82000, 31.05000, "Mbare, Harare");
+        
+        RideRequest testRide4 = new RideRequest();
+        testRide4.rideId = "test_ride_4";
+        testRide4.commuterId = "test_commuter_4";
+        testRide4.driverId = "test_driver_4";
+        testRide4.pickupLocation = pickup4;
+        testRide4.destination = dest4;
+        testRide4.status = "pending";
+        testRide4.people = 1;
+        testRide4.priceEach = 3.50;
+        testRide4.timestamp = System.currentTimeMillis();
+        
+        // Create test ride request 5 - Zengeza 5
+        RideRequest.LocationData pickup5 = new RideRequest.LocationData(-17.80500, 31.03500, "Zengeza 5, Chitungwiza");
+        RideRequest.LocationData dest5 = new RideRequest.LocationData(-17.81500, 31.04500, "Highfield, Harare");
+        
+        RideRequest testRide5 = new RideRequest();
+        testRide5.rideId = "test_ride_5";
+        testRide5.commuterId = "test_commuter_5";
+        testRide5.driverId = "test_driver_5";
+        testRide5.pickupLocation = pickup5;
+        testRide5.destination = dest5;
+        testRide5.status = "pending";
+        testRide5.people = 2;
+        testRide5.priceEach = 4.50;
+        testRide5.timestamp = System.currentTimeMillis();
+        
         // Add test rides to the list
         pendingRideRequests.add(testRide1);
         pendingRideRequests.add(testRide2);
+        pendingRideRequests.add(testRide3);
+        pendingRideRequests.add(testRide4);
+        pendingRideRequests.add(testRide5);
         
-        Log.d("RideRequests", "Created " + pendingRideRequests.size() + " test ride requests");
+        Log.d("RideRequests", "Created " + pendingRideRequests.size() + " test ride requests in Zengeza area");
         
         // Display the test markers
         displayRideRequestMarkers();
