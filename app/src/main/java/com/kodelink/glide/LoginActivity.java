@@ -7,6 +7,7 @@ import android.os.Looper;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.Toast;
+import android.widget.ScrollView;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -25,6 +26,7 @@ public class LoginActivity extends BaseActivity {
     private MaterialButton btnLogin;
     private View tvForgotPassword;
     private View tvRegisterLink;
+    private ScrollView scrollView;
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore mFirestore;
@@ -48,6 +50,7 @@ public class LoginActivity extends BaseActivity {
         btnLogin = findViewById(R.id.btnLogin);
         tvForgotPassword = findViewById(R.id.tvForgotPassword);
         tvRegisterLink = findViewById(R.id.tvRegisterLink);
+        scrollView = findViewById(R.id.scrollView);
 
         // Initialize suggestion handler
         suggestionHandler = new Handler(Looper.getMainLooper());
@@ -60,6 +63,9 @@ public class LoginActivity extends BaseActivity {
         
         // Setup click listeners
         setupClickListeners();
+        
+        // Setup focus handling for keyboard visibility
+        setupFocusHandling();
         
         // AuthStateListener removed to prevent double navigation
     }
@@ -112,6 +118,31 @@ public class LoginActivity extends BaseActivity {
                 // Disable suggestions when tapping outside input fields
                 if (suggestionsEnabled) {
                     disableSuggestions();
+                }
+            });
+        }
+    }
+
+    private void setupFocusHandling() {
+        // Handle focus changes to ensure password field is visible when keyboard appears
+        if (etPassword != null) {
+            etPassword.setOnFocusChangeListener((v, hasFocus) -> {
+                if (hasFocus && scrollView != null) {
+                    // Delay the scroll to ensure keyboard is fully shown
+                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                        scrollView.smoothScrollTo(0, etPassword.getBottom());
+                    }, 100);
+                }
+            });
+        }
+
+        // Also handle email field focus to ensure smooth scrolling
+        if (etEmail != null) {
+            etEmail.setOnFocusChangeListener((v, hasFocus) -> {
+                if (hasFocus && scrollView != null) {
+                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                        scrollView.smoothScrollTo(0, etEmail.getBottom());
+                    }, 100);
                 }
             });
         }
