@@ -175,6 +175,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     // Ride request sent card variables
     private View rideRequestSentCard;
     private TextView tvDriverNameSent;
+    private TextView tvStatusMessage;
     private TextView tvCountdownTimer;
     private Button btnCancelRequest;
     private Animation fadeInAnimation;
@@ -1547,6 +1548,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         
         // Initialize card views
         tvDriverNameSent = rideRequestSentCard.findViewById(R.id.tvDriverNameSent);
+        tvStatusMessage = rideRequestSentCard.findViewById(R.id.tvStatusMessage);
         tvCountdownTimer = rideRequestSentCard.findViewById(R.id.tvCountdownTimer);
         btnCancelRequest = rideRequestSentCard.findViewById(R.id.btnCancelRequest);
         
@@ -1556,8 +1558,16 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         
         // Set up button listener
         btnCancelRequest.setOnClickListener(v -> {
-            cancelActiveRideRequest();
-            hideRideRequestSentCard();
+            String buttonText = btnCancelRequest.getText().toString();
+            if ("OK".equals(buttonText)) {
+                // OK button clicked - hide card and show drivers
+                hideRideRequestSentCard();
+                showNearbyDrivers();
+            } else {
+                // Cancel button clicked - cancel the ride request
+                cancelActiveRideRequest();
+                hideRideRequestSentCard();
+            }
         });
         
         // Set up fade out animation listener
@@ -1585,6 +1595,18 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         Log.d("RideRequestCard", "Showing ride request sent card for driver: " + driverName);
         if (driverName != null) {
             tvDriverNameSent.setText(driverName);
+        }
+        
+        // Set initial status message
+        if (tvStatusMessage != null) {
+            tvStatusMessage.setText("Please wait for the driver to respond...");
+            tvStatusMessage.setTextColor(getResources().getColor(R.color.gray_600));
+        }
+        
+        // Reset button to Cancel Request
+        if (btnCancelRequest != null) {
+            btnCancelRequest.setText("Cancel Request");
+            btnCancelRequest.setBackgroundColor(getResources().getColor(R.color.purple_500));
         }
         
         // Initialize countdown timer display
@@ -1950,17 +1972,25 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
             firebaseService.timeoutRideRequest(activeRideRequest.rideId)
                 .addOnSuccessListener(aVoid -> {
                     Log.d("Timeout", "Ride request timed out successfully");
-                    Toast.makeText(HomeCommuterActivity.this, "Ride request timed out. No driver accepted within 2 minutes.", Toast.LENGTH_LONG).show();
+                    
+                    // Show timeout message on the card
+                    if (tvStatusMessage != null) {
+                        tvStatusMessage.setText("Driver did not respond. Choose another driver below.");
+                        tvStatusMessage.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
+                    }
+                    
+                    // Change cancel button to OK
+                    if (btnCancelRequest != null) {
+                        btnCancelRequest.setText("OK");
+                        btnCancelRequest.setBackgroundColor(getResources().getColor(R.color.purple_500));
+                    }
+                    
+                    // Show toast message
+                    Toast.makeText(HomeCommuterActivity.this, "Driver did not respond. Please choose another driver.", Toast.LENGTH_LONG).show();
                     
                     // Reset active ride state
                     hasActiveRide = false;
                     activeRideRequest = null;
-                    
-                    // Hide the ride request sent card
-                    hideRideRequestSentCard();
-                    
-                    // Show nearby drivers again
-                    showNearbyDrivers();
                     
                     // Stop the timeout timer
                     stopTimeoutTimer();
@@ -1974,8 +2004,20 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
             // Still reset the state and show drivers
             hasActiveRide = false;
             activeRideRequest = null;
-            hideRideRequestSentCard();
-            showNearbyDrivers();
+            
+            // Show timeout message on the card
+            if (tvStatusMessage != null) {
+                tvStatusMessage.setText("Driver did not respond. Choose another driver below.");
+                tvStatusMessage.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
+            }
+            
+            // Change cancel button to OK
+            if (btnCancelRequest != null) {
+                btnCancelRequest.setText("OK");
+                btnCancelRequest.setBackgroundColor(getResources().getColor(R.color.purple_500));
+            }
+            
+            Toast.makeText(HomeCommuterActivity.this, "Driver did not respond. Please choose another driver.", Toast.LENGTH_LONG).show();
             stopTimeoutTimer();
         }
     }
