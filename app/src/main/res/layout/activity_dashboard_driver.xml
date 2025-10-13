@@ -259,7 +259,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="To Pickup"
+                        android:text="Pickup"
                         android:textSize="12sp"
                         android:textColor="@color/gray_600" />
 
@@ -285,7 +285,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="To Destination"
+                        android:text="Destination"
                         android:textSize="12sp"
                         android:textColor="@color/gray_600" />
 
