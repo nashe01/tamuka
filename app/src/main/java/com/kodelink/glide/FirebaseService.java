@@ -633,6 +633,45 @@ public class FirebaseService {
         }
     }
 
+    /**
+     * Get all pending ride requests for drivers to display on map
+     */
+    public Task<List<RideRequest>> getAllPendingRideRequests() {
+        return firestore.collection("rideRequests")
+            .whereEqualTo("status", "pending")
+            .get()
+            .continueWith(task -> {
+                List<RideRequest> pendingRequests = new ArrayList<>();
+                if (task.isSuccessful()) {
+                    QuerySnapshot snapshot = task.getResult();
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                        RideRequest ride = parseRideRequest(doc);
+                        if (ride != null) {
+                            pendingRequests.add(ride);
+                        }
+                    }
+                }
+                return pendingRequests;
+            });
+    }
+
+    /**
+     * Listen for all pending ride requests in real-time
+     */
+    public void listenAllPendingRideRequests(com.google.firebase.database.ValueEventListener listener) {
+        realtimeDb.child("rideRequestsLive")
+            .orderByChild("status")
+            .equalTo("pending")
+            .addValueEventListener(listener);
+    }
+    
+    /**
+     * Remove ride requests listener
+     */
+    public void removeRideRequestsListener(com.google.firebase.database.ValueEventListener listener) {
+        realtimeDb.child("rideRequestsLive").removeEventListener(listener);
+    }
+
     // ==================== CALLBACK INTERFACES ====================
     
     public interface DatabaseCallback {
