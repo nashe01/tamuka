@@ -1833,23 +1833,8 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
             public void run() {
                 // Check if ride is still pending after 2 minutes
                 if (activeRideRequest != null && "pending".equals(activeRideRequest.status)) {
-                    Log.d("Timeout", "Ride request timed out after 2 minutes");
-                    
-                    // Timeout the ride request
-                    if (activeRideRequest.rideId != null) {
-                        firebaseService.timeoutRideRequest(activeRideRequest.rideId)
-                            .addOnSuccessListener(aVoid -> {
-                                Log.d("Timeout", "Ride request timed out successfully");
-                                Toast.makeText(HomeCommuterActivity.this, "Ride request timed out. No driver accepted within 2 minutes.", Toast.LENGTH_LONG).show();
-                                hasActiveRide = false;
-                                activeRideRequest = null;
-                                showNearbyDrivers();
-                            })
-                            .addOnFailureListener(e -> {
-                                Log.e("Timeout", "Failed to timeout ride request", e);
-                                Toast.makeText(HomeCommuterActivity.this, "Failed to timeout ride request: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                            });
-                    }
+                    Log.d("Timeout", "Ride request timed out after 2 minutes (backup timeout)");
+                    triggerRideTimeout();
                 }
             }
         };
@@ -1921,7 +1906,10 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                     if (countdownSeconds <= 0) {
                         tvCountdownTimer.setText("0:00");
                         tvCountdownTimer.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
-                        Log.d("Countdown", "Timer reached 0:00");
+                        Log.d("Countdown", "Timer reached 0:00 - triggering timeout");
+                        
+                        // Trigger timeout when countdown reaches 0
+                        triggerRideTimeout();
                     } else {
                         Log.d("Countdown", "Countdown stopped - conditions not met, countdownSeconds: " + countdownSeconds);
                     }
@@ -1949,6 +1937,47 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         // Reset countdown seconds
         countdownSeconds = 120;
         Log.d("Timeout", "Timeout timer and countdown stopped");
+    }
+
+    /**
+     * Trigger ride timeout when countdown reaches 0
+     */
+    private void triggerRideTimeout() {
+        Log.d("Timeout", "Triggering ride timeout");
+        
+        if (activeRideRequest != null && activeRideRequest.rideId != null) {
+            // Timeout the ride request
+            firebaseService.timeoutRideRequest(activeRideRequest.rideId)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d("Timeout", "Ride request timed out successfully");
+                    Toast.makeText(HomeCommuterActivity.this, "Ride request timed out. No driver accepted within 2 minutes.", Toast.LENGTH_LONG).show();
+                    
+                    // Reset active ride state
+                    hasActiveRide = false;
+                    activeRideRequest = null;
+                    
+                    // Hide the ride request sent card
+                    hideRideRequestSentCard();
+                    
+                    // Show nearby drivers again
+                    showNearbyDrivers();
+                    
+                    // Stop the timeout timer
+                    stopTimeoutTimer();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("Timeout", "Failed to timeout ride request", e);
+                    Toast.makeText(HomeCommuterActivity.this, "Failed to timeout ride request: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+        } else {
+            Log.w("Timeout", "No active ride request to timeout");
+            // Still reset the state and show drivers
+            hasActiveRide = false;
+            activeRideRequest = null;
+            hideRideRequestSentCard();
+            showNearbyDrivers();
+            stopTimeoutTimer();
+        }
     }
 
 }
