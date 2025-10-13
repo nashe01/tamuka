@@ -148,6 +148,10 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private com.google.firebase.database.ValueEventListener activeRideListener;
     private boolean hasActiveRide = false;
     
+    // Driver tracking for timeout handling
+    private String currentRequestedDriverId;
+    private List<String> timedOutDriverIds = new ArrayList<>();
+    
     // Timeout handling
     private android.os.Handler timeoutHandler;
     private Runnable timeoutRunnable;
@@ -749,6 +753,8 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         driverMarkers.clear();
         availableDrivers.clear();
         
+        Log.d("DriverFilter", "Showing nearby drivers, excluding timed out drivers: " + timedOutDriverIds);
+        
         // Listen for available drivers from Realtime Database
         firebaseService.listenAvailableDrivers(new com.google.firebase.database.ValueEventListener() {
             @Override
@@ -781,6 +787,12 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
 
     private void displayDriverMarkers() {
         for (Driver driver : availableDrivers) {
+            // Skip drivers that have timed out
+            if (timedOutDriverIds.contains(driver.driverId)) {
+                Log.d("DriverFilter", "Skipping timed out driver: " + driver.driverId);
+                continue;
+            }
+            
             if (driver.currentLocation != null) {
                 LatLng driverLocation = new LatLng(driver.currentLocation.lat, driver.currentLocation.lng);
                 Marker driverMarker = googleMap.addMarker(new MarkerOptions()
@@ -792,6 +804,24 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                 // Set driver object as tag for click handling
                 driverMarker.setTag(driver);
                 driverMarkers.add(driverMarker);
+            }
+        }
+    }
+
+    /**
+     * Remove a specific driver's marker from the map
+     */
+    private void removeDriverMarker(String driverId) {
+        for (int i = driverMarkers.size() - 1; i >= 0; i--) {
+            Marker marker = driverMarkers.get(i);
+            if (marker.getTag() != null && marker.getTag() instanceof Driver) {
+                Driver driver = (Driver) marker.getTag();
+                if (driverId.equals(driver.driverId)) {
+                    marker.remove();
+                    driverMarkers.remove(i);
+                    Log.d("DriverMarker", "Removed marker for driver: " + driverId);
+                    break;
+                }
             }
         }
     }
@@ -824,6 +854,10 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
             Toast.makeText(this, statusMessage, Toast.LENGTH_LONG).show();
             return;
         }
+        
+        // Clear timed out drivers list when starting a new request
+        timedOutDriverIds.clear();
+        Log.d("DriverFilter", "Cleared timed out drivers list for new request");
         
         // Show immediate feedback that button was pressed
         Toast.makeText(this, "Button pressed! Processing request...", Toast.LENGTH_SHORT).show();
@@ -931,6 +965,9 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                     activeRideRequest.status = "pending";
                     activeRideRequest.commuterId = commuterId;
                     activeRideRequest.driverId = driver.driverId;
+                    
+                    // Track the current requested driver
+                    currentRequestedDriverId = driver.driverId;
                     
                     Log.d("RideRequest", "Active ride request created: " + activeRideRequest.rideId + ", status: " + activeRideRequest.status);
                     
@@ -1988,9 +2025,17 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                     // Show toast message
                     Toast.makeText(HomeCommuterActivity.this, "Driver did not respond. Please choose another driver.", Toast.LENGTH_LONG).show();
                     
+                    // Add driver to timed out list and remove their marker
+                    if (currentRequestedDriverId != null) {
+                        timedOutDriverIds.add(currentRequestedDriverId);
+                        removeDriverMarker(currentRequestedDriverId);
+                        Log.d("Timeout", "Removed marker for timed out driver: " + currentRequestedDriverId);
+                    }
+                    
                     // Reset active ride state
                     hasActiveRide = false;
                     activeRideRequest = null;
+                    currentRequestedDriverId = null;
                     
                     // Stop the timeout timer
                     stopTimeoutTimer();
@@ -2001,9 +2046,17 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                 });
         } else {
             Log.w("Timeout", "No active ride request to timeout");
+            // Add driver to timed out list and remove their marker
+            if (currentRequestedDriverId != null) {
+                timedOutDriverIds.add(currentRequestedDriverId);
+                removeDriverMarker(currentRequestedDriverId);
+                Log.d("Timeout", "Removed marker for timed out driver (fallback): " + currentRequestedDriverId);
+            }
+            
             // Still reset the state and show drivers
             hasActiveRide = false;
             activeRideRequest = null;
+            currentRequestedDriverId = null;
             
             // Show timeout message on the card
             if (tvStatusMessage != null) {
