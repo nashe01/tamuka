@@ -421,7 +421,7 @@
                     android:textColor="@color/white"
                     android:textSize="16sp"
                     android:textStyle="bold"
-                    app:backgroundTint="@color/green"
+                    app:backgroundTint="@color/primary"
                     app:cornerRadius="12dp"
                     app:rippleColor="@color/primary_dark" />
 
