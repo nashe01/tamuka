@@ -633,6 +633,134 @@ public class FirebaseService {
         }
     }
 
+    /**
+     * Get all pending ride requests for drivers to display on map
+     */
+    public Task<List<RideRequest>> getAllPendingRideRequests() {
+        return firestore.collection("rideRequests")
+            .whereEqualTo("status", "pending")
+            .get()
+            .continueWith(task -> {
+                List<RideRequest> pendingRequests = new ArrayList<>();
+                if (task.isSuccessful()) {
+                    QuerySnapshot snapshot = task.getResult();
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                        RideRequest ride = parseRideRequest(doc);
+                        if (ride != null) {
+                            pendingRequests.add(ride);
+                        }
+                    }
+                }
+                return pendingRequests;
+            });
+    }
+
+    /**
+     * Listen for all pending ride requests in real-time
+     */
+    public void listenAllPendingRideRequests(com.google.firebase.database.ValueEventListener listener) {
+        realtimeDb.child("rideRequestsLive")
+            .orderByChild("status")
+            .equalTo("pending")
+            .addValueEventListener(listener);
+    }
+    
+    /**
+     * Remove ride requests listener
+     */
+    public void removeRideRequestsListener(com.google.firebase.database.ValueEventListener listener) {
+        realtimeDb.child("rideRequestsLive").removeEventListener(listener);
+    }
+
+    /**
+     * Check if commuter has any active ride requests
+     * Returns true if commuter has pending, accepted, or in_progress rides
+     */
+    public Task<Boolean> hasActiveRideRequest(String commuterId) {
+        return firestore.collection("rideRequests")
+            .whereEqualTo("commuterId", commuterId)
+            .whereIn("status", java.util.Arrays.asList("pending", "accepted", "in_progress"))
+            .limit(1)
+            .get()
+            .continueWith(task -> {
+                if (task.isSuccessful()) {
+                    return !task.getResult().isEmpty();
+                }
+                return false;
+            });
+    }
+
+    /**
+     * Get active ride request for a commuter
+     * Returns the first active ride request found
+     */
+    public Task<RideRequest> getActiveRideRequest(String commuterId) {
+        return firestore.collection("rideRequests")
+            .whereEqualTo("commuterId", commuterId)
+            .whereIn("status", java.util.Arrays.asList("pending", "accepted", "in_progress"))
+            .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(1)
+            .get()
+            .continueWith(task -> {
+                if (task.isSuccessful() && !task.getResult().isEmpty()) {
+                    DocumentSnapshot doc = task.getResult().getDocuments().get(0);
+                    return parseRideRequest(doc);
+                }
+                return null;
+            });
+    }
+
+    /**
+     * Listen for active ride request changes for a commuter
+     */
+    public void listenActiveRideRequest(String commuterId, com.google.firebase.database.ValueEventListener listener) {
+        realtimeDb.child("rideRequestsLive")
+            .orderByChild("commuterId")
+            .equalTo(commuterId)
+            .addValueEventListener(listener);
+    }
+
+    /**
+     * Cancel a ride request (commuter cancels before driver accepts)
+     */
+    public Task<Void> cancelRideRequest(String rideId) {
+        // Update status to cancelled in both databases
+        return updateRideRequestStatus(rideId, "cancelled");
+    }
+
+    /**
+     * Timeout a ride request (automatic cancellation after 2 minutes)
+     */
+    public Task<Void> timeoutRideRequest(String rideId) {
+        // Update status to timeout in both databases
+        return updateRideRequestStatus(rideId, "timeout");
+    }
+
+    /**
+     * Check for expired ride requests and clean them up
+     */
+    public Task<Void> cleanupExpiredRideRequests() {
+        long twoMinutesAgo = System.currentTimeMillis() - (2 * 60 * 1000); // 2 minutes ago
+        
+        return firestore.collection("rideRequests")
+            .whereEqualTo("status", "pending")
+            .whereLessThan("timestamp", twoMinutesAgo)
+            .get()
+            .continueWithTask(task -> {
+                if (task.isSuccessful() && !task.getResult().isEmpty()) {
+                    List<Task<Void>> timeoutTasks = new ArrayList<>();
+                    for (DocumentSnapshot doc : task.getResult().getDocuments()) {
+                        String rideId = doc.getString("rideId");
+                        if (rideId != null) {
+                            timeoutTasks.add(timeoutRideRequest(rideId));
+                        }
+                    }
+                    return Tasks.whenAll(timeoutTasks);
+                }
+                return Tasks.forResult(null);
+            });
+    }
+
     // ==================== CALLBACK INTERFACES ====================
     
     public interface DatabaseCallback {
