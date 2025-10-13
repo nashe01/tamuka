@@ -672,6 +672,62 @@ public class FirebaseService {
         realtimeDb.child("rideRequestsLive").removeEventListener(listener);
     }
 
+    /**
+     * Check if commuter has any active ride requests
+     * Returns true if commuter has pending, accepted, or in_progress rides
+     */
+    public Task<Boolean> hasActiveRideRequest(String commuterId) {
+        return firestore.collection("rideRequests")
+            .whereEqualTo("commuterId", commuterId)
+            .whereIn("status", java.util.Arrays.asList("pending", "accepted", "in_progress"))
+            .limit(1)
+            .get()
+            .continueWith(task -> {
+                if (task.isSuccessful()) {
+                    return !task.getResult().isEmpty();
+                }
+                return false;
+            });
+    }
+
+    /**
+     * Get active ride request for a commuter
+     * Returns the first active ride request found
+     */
+    public Task<RideRequest> getActiveRideRequest(String commuterId) {
+        return firestore.collection("rideRequests")
+            .whereEqualTo("commuterId", commuterId)
+            .whereIn("status", java.util.Arrays.asList("pending", "accepted", "in_progress"))
+            .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(1)
+            .get()
+            .continueWith(task -> {
+                if (task.isSuccessful() && !task.getResult().isEmpty()) {
+                    DocumentSnapshot doc = task.getResult().getDocuments().get(0);
+                    return parseRideRequest(doc);
+                }
+                return null;
+            });
+    }
+
+    /**
+     * Listen for active ride request changes for a commuter
+     */
+    public void listenActiveRideRequest(String commuterId, com.google.firebase.database.ValueEventListener listener) {
+        realtimeDb.child("rideRequestsLive")
+            .orderByChild("commuterId")
+            .equalTo(commuterId)
+            .addValueEventListener(listener);
+    }
+
+    /**
+     * Cancel a ride request (commuter cancels before driver accepts)
+     */
+    public Task<Void> cancelRideRequest(String rideId) {
+        // Update status to cancelled in both databases
+        return updateRideRequestStatus(rideId, "cancelled");
+    }
+
     // ==================== CALLBACK INTERFACES ====================
     
     public interface DatabaseCallback {

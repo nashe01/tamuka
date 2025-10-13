@@ -143,6 +143,11 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private Driver selectedDriver;
     private CustomInfoWindowAdapter infoWindowAdapter;
     
+    // Active ride tracking
+    private RideRequest activeRideRequest;
+    private com.google.firebase.database.ValueEventListener activeRideListener;
+    private boolean hasActiveRide = false;
+    
     // Driver selection card variables
     private View driverSelectionCard;
     private TextView tvDriverName;
@@ -225,6 +230,9 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
 
         // Update header with user role
         updateNavigationHeader();
+
+        // Check for active rides
+        checkForActiveRides();
 
         // Request location permission
         requestLocationPermission();
@@ -376,6 +384,10 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     protected void onDestroy() {
         super.onDestroy();
         mapView.onDestroy();
+        // Remove active ride listener
+        if (activeRideListener != null) {
+            firebaseService.removeRideRequestsListener(activeRideListener);
+        }
     }
 
     @Override
@@ -778,6 +790,26 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
      * Handle Request Ride button click from custom info window
      */
     private void onRequestRide(Driver driver) {
+        // Check if commuter already has an active ride
+        if (hasActiveRide) {
+            String statusMessage = "You already have an active ride request";
+            if (activeRideRequest != null) {
+                switch (activeRideRequest.status) {
+                    case "pending":
+                        statusMessage = "You have a pending ride request. Please wait for driver response or cancel it first.";
+                        break;
+                    case "accepted":
+                        statusMessage = "Your ride has been accepted and is in progress. Please complete this ride before requesting another.";
+                        break;
+                    case "in_progress":
+                        statusMessage = "You have a ride in progress. Please complete this ride before requesting another.";
+                        break;
+                }
+            }
+            Toast.makeText(this, statusMessage, Toast.LENGTH_LONG).show();
+            return;
+        }
+        
         // Show immediate feedback that button was pressed
         Toast.makeText(this, "Button pressed! Processing request...", Toast.LENGTH_SHORT).show();
         
@@ -878,6 +910,8 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                 ).addOnSuccessListener(aVoid -> {
                     Log.d("RideRequest", "Ride request created successfully");
                     showRideRequestSentMessage(driver.name);
+                    // Set active ride state
+                    hasActiveRide = true;
                     // Note: We'll need to get the rideId from the response or generate it consistently
                     showWaitingScreen("ride_" + System.currentTimeMillis());
                 }).addOnFailureListener(e -> {
@@ -909,15 +943,36 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                         switch (status) {
                             case "accepted":
                                 Toast.makeText(HomeCommuterActivity.this, "Ride accepted! Driver is on the way.", Toast.LENGTH_LONG).show();
+                                // Update active ride state
+                                hasActiveRide = true;
                                 // Here you would navigate to ride tracking screen
                                 break;
                             case "declined":
                                 Toast.makeText(HomeCommuterActivity.this, "Ride declined. Looking for another driver...", Toast.LENGTH_LONG).show();
+                                // Reset active ride state
+                                hasActiveRide = false;
+                                activeRideRequest = null;
                                 // Remove declined driver from available list and show others
                                 showNearbyDrivers();
                                 break;
+                            case "completed":
+                                Toast.makeText(HomeCommuterActivity.this, "Ride completed successfully!", Toast.LENGTH_LONG).show();
+                                // Reset active ride state
+                                hasActiveRide = false;
+                                activeRideRequest = null;
+                                break;
+                            case "cancelled":
+                                Toast.makeText(HomeCommuterActivity.this, "Ride cancelled.", Toast.LENGTH_LONG).show();
+                                // Reset active ride state
+                                hasActiveRide = false;
+                                activeRideRequest = null;
+                                break;
                         }
                     }
+                } else {
+                    // Ride request no longer exists (completed/cancelled)
+                    hasActiveRide = false;
+                    activeRideRequest = null;
                 }
             }
             
@@ -1407,6 +1462,17 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         etNumberOfPeople.setText("1");
         etPricePerPerson.setText("5.00");
         
+        // Update button state based on active ride status
+        if (hasActiveRide) {
+            btnRequestRide.setEnabled(false);
+            btnRequestRide.setText("Active Ride in Progress");
+            btnRequestRide.setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
+        } else {
+            btnRequestRide.setEnabled(true);
+            btnRequestRide.setText("Request Ride");
+            btnRequestRide.setBackgroundColor(getResources().getColor(R.color.purple_500));
+        }
+        
         // Show card with animation
         driverSelectionCard.setVisibility(View.VISIBLE);
         driverSelectionCard.startAnimation(slideUpAnimation);
@@ -1449,8 +1515,8 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         
         // Set up button listener
         btnCancelRequest.setOnClickListener(v -> {
+            cancelActiveRideRequest();
             hideRideRequestSentCard();
-            // TODO: Implement cancel ride request functionality
         });
         
         // Set up fade out animation listener
@@ -1492,4 +1558,195 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
             rideRequestSentCard.startAnimation(fadeOutAnimation);
         }
     }
+
+    /**
+     * Check if commuter has any active ride requests
+     */
+    private void checkForActiveRides() {
+        firebaseService.getCurrentUserEntityId()
+            .addOnSuccessListener(commuterId -> {
+                if (commuterId != null) {
+                    // Check if commuter has active rides
+                    firebaseService.hasActiveRideRequest(commuterId)
+                        .addOnSuccessListener(hasActive -> {
+                            if (hasActive) {
+                                // Get the active ride details
+                                firebaseService.getActiveRideRequest(commuterId)
+                                    .addOnSuccessListener(activeRide -> {
+                                        if (activeRide != null) {
+                                            activeRideRequest = activeRide;
+                                            hasActiveRide = true;
+                                            
+                                            // Show appropriate message based on status
+                                            String message = "You have an active ride request";
+                                            switch (activeRide.status) {
+                                                case "pending":
+                                                    message = "You have a pending ride request. Please wait for driver response.";
+                                                    break;
+                                                case "accepted":
+                                                    message = "Your ride has been accepted and is in progress.";
+                                                    break;
+                                                case "in_progress":
+                                                    message = "You have a ride in progress.";
+                                                    break;
+                                            }
+                                            Toast.makeText(HomeCommuterActivity.this, message, Toast.LENGTH_LONG).show();
+                                            
+                                            // Set up listener for active ride updates
+                                            setupActiveRideListener(commuterId);
+                                        }
+                                    })
+                                    .addOnFailureListener(e -> {
+                                        Log.e("ActiveRide", "Failed to get active ride details", e);
+                                    });
+                            } else {
+                                hasActiveRide = false;
+                                activeRideRequest = null;
+                            }
+                        })
+                        .addOnFailureListener(e -> {
+                            Log.e("ActiveRide", "Failed to check for active rides", e);
+                        });
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e("ActiveRide", "Failed to get current user entity ID", e);
+            });
+    }
+
+    /**
+     * Set up listener for active ride updates
+     */
+    private void setupActiveRideListener(String commuterId) {
+        activeRideListener = new com.google.firebase.database.ValueEventListener() {
+            @Override
+            public void onDataChange(com.google.firebase.database.DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    // Parse the active ride from snapshot
+                    RideRequest ride = parseRideRequestFromSnapshot(dataSnapshot);
+                    if (ride != null) {
+                        activeRideRequest = ride;
+                        hasActiveRide = true;
+                        
+                        // Update UI based on status
+                        updateUIForActiveRide(ride);
+                    }
+                } else {
+                    // No active ride
+                    hasActiveRide = false;
+                    activeRideRequest = null;
+                }
+            }
+            
+            @Override
+            public void onCancelled(com.google.firebase.database.DatabaseError databaseError) {
+                Log.e("ActiveRide", "Error listening to active ride: " + databaseError.getMessage());
+            }
+        };
+        
+        firebaseService.listenActiveRideRequest(commuterId, activeRideListener);
+    }
+
+    /**
+     * Parse RideRequest from Realtime Database snapshot
+     */
+    private RideRequest parseRideRequestFromSnapshot(com.google.firebase.database.DataSnapshot snapshot) {
+        try {
+            RideRequest ride = new RideRequest();
+            ride.rideId = snapshot.child("rideId").getValue(String.class);
+            ride.commuterId = snapshot.child("commuterId").getValue(String.class);
+            ride.driverId = snapshot.child("driverId").getValue(String.class);
+            ride.status = snapshot.child("status").getValue(String.class);
+            ride.people = snapshot.child("people").getValue(Integer.class);
+            ride.priceEach = snapshot.child("priceEach").getValue(Double.class);
+            ride.timestamp = snapshot.child("timestamp").getValue(Long.class);
+            
+            // Parse location data
+            com.google.firebase.database.DataSnapshot pickupSnapshot = snapshot.child("pickupLocation");
+            if (pickupSnapshot.exists()) {
+                ride.pickupLocation = new RideRequest.LocationData();
+                ride.pickupLocation.lat = pickupSnapshot.child("lat").getValue(Double.class);
+                ride.pickupLocation.lng = pickupSnapshot.child("lng").getValue(Double.class);
+                ride.pickupLocation.address = pickupSnapshot.child("address").getValue(String.class);
+            }
+            
+            com.google.firebase.database.DataSnapshot destSnapshot = snapshot.child("destination");
+            if (destSnapshot.exists()) {
+                ride.destination = new RideRequest.LocationData();
+                ride.destination.lat = destSnapshot.child("lat").getValue(Double.class);
+                ride.destination.lng = destSnapshot.child("lng").getValue(Double.class);
+                ride.destination.address = destSnapshot.child("address").getValue(String.class);
+            }
+            
+            return ride;
+        } catch (Exception e) {
+            Log.e("ParseRide", "Error parsing ride request from snapshot", e);
+            return null;
+        }
+    }
+
+    /**
+     * Update UI based on active ride status
+     */
+    private void updateUIForActiveRide(RideRequest ride) {
+        if (ride != null) {
+            switch (ride.status) {
+                case "pending":
+                    // Show pending message and allow cancellation
+                    Toast.makeText(this, "Ride request pending. You can cancel it if needed.", Toast.LENGTH_SHORT).show();
+                    break;
+                case "accepted":
+                    // Show accepted message and disable new requests
+                    Toast.makeText(this, "Ride accepted! Driver is on the way.", Toast.LENGTH_LONG).show();
+                    break;
+                case "in_progress":
+                    // Show in progress message and disable new requests
+                    Toast.makeText(this, "Ride in progress. Please complete this ride first.", Toast.LENGTH_LONG).show();
+                    break;
+                case "completed":
+                    Toast.makeText(this, "Ride completed successfully!", Toast.LENGTH_SHORT).show();
+                    // Reset active ride state
+                    hasActiveRide = false;
+                    activeRideRequest = null;
+                    break;
+                case "declined":
+                    Toast.makeText(this, "Ride declined by driver. You can now request another ride.", Toast.LENGTH_LONG).show();
+                    // Reset active ride state
+                    hasActiveRide = false;
+                    activeRideRequest = null;
+                    break;
+                case "cancelled":
+                    Toast.makeText(this, "Ride cancelled successfully.", Toast.LENGTH_SHORT).show();
+                    // Reset active ride state
+                    hasActiveRide = false;
+                    activeRideRequest = null;
+                    break;
+            }
+        }
+    }
+
+    /**
+     * Cancel the active ride request
+     */
+    private void cancelActiveRideRequest() {
+        if (activeRideRequest != null && activeRideRequest.rideId != null) {
+            // Only allow cancellation if ride is still pending
+            if ("pending".equals(activeRideRequest.status)) {
+                firebaseService.cancelRideRequest(activeRideRequest.rideId)
+                    .addOnSuccessListener(aVoid -> {
+                        Toast.makeText(this, "Ride request cancelled successfully", Toast.LENGTH_SHORT).show();
+                        hasActiveRide = false;
+                        activeRideRequest = null;
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(this, "Failed to cancel ride request: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    });
+            } else {
+                Toast.makeText(this, "Cannot cancel ride request. Ride status: " + activeRideRequest.status, Toast.LENGTH_LONG).show();
+            }
+        } else {
+            Toast.makeText(this, "No active ride request to cancel", Toast.LENGTH_SHORT).show();
+        }
+    }
+
 }
