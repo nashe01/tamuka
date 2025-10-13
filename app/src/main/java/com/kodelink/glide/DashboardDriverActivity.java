@@ -156,6 +156,14 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
         btnMenu.setOnClickListener(v -> {
             drawerLayout.openDrawer(GravityCompat.START);
         });
+        
+        // Debug button for testing markers
+        com.google.android.material.floatingactionbutton.FloatingActionButton fabDebug = findViewById(R.id.fabDebug);
+        fabDebug.setOnClickListener(v -> {
+            Log.d("RideRequests", "Debug button clicked - creating test markers");
+            createTestRideRequests();
+            Toast.makeText(this, "Test markers created! Check the map.", Toast.LENGTH_SHORT).show();
+        });
 
         // Set up availability toggle
         switchAvailability.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -446,25 +454,8 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
         firebaseService.listenDriverRideRequests(currentDriverId, new com.google.firebase.database.ValueEventListener() {
             @Override
             public void onDataChange(com.google.firebase.database.DataSnapshot dataSnapshot) {
-                for (com.google.firebase.database.DataSnapshot snapshot : dataSnapshot.getChildren()) {
-                    String status = snapshot.child("status").getValue(String.class);
-                    if ("pending".equals(status)) {
-                        String rideId = snapshot.getKey();
-                        if (rideId != null) {
-                            // Get full ride request details from Firestore
-                            firebaseService.getRideRequestDetails(rideId)
-                                .addOnSuccessListener(rideRequest -> {
-                                    if (rideRequest != null) {
-                                        currentRideRequest = rideRequest;
-                                        showIncomingRideRequestDialog(rideRequest);
-                                    }
-                                })
-                                .addOnFailureListener(e -> {
-                                    Log.e("RideRequest", "Failed to get ride request details", e);
-                                });
-                        }
-                    }
-                }
+                // Just update the markers, don't show card automatically
+                loadPendingRideRequests();
             }
             
             @Override
@@ -474,9 +465,6 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
         });
     }
     
-    private void showIncomingRideRequestDialog(RideRequest rideRequest) {
-        showRideRequestCard(rideRequest);
-    }
     
     private void acceptRideRequest(RideRequest rideRequest) {
         // Hide the ride request card
@@ -899,14 +887,16 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
      * Load all pending ride requests and display them as markers on the map
      */
     private void loadPendingRideRequests() {
+        Log.d("RideRequests", "Loading pending ride requests...");
         firebaseService.getAllPendingRideRequests()
             .addOnSuccessListener(rideRequests -> {
+                Log.d("RideRequests", "Found " + rideRequests.size() + " pending ride requests");
                 pendingRideRequests = rideRequests;
                 displayRideRequestMarkers();
             })
             .addOnFailureListener(e -> {
                 Log.e("RideRequests", "Failed to load pending ride requests", e);
-                Toast.makeText(this, "Failed to load ride requests", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Failed to load ride requests: " + e.getMessage(), Toast.LENGTH_LONG).show();
             });
     }
     
@@ -914,32 +904,95 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
      * Display ride request markers on the map
      */
     private void displayRideRequestMarkers() {
+        Log.d("RideRequests", "Displaying ride request markers...");
+        
         // Clear existing markers
         for (com.google.android.gms.maps.model.Marker marker : rideRequestMarkers.values()) {
             marker.remove();
         }
         rideRequestMarkers.clear();
         
-        if (googleMap == null) return;
+        if (googleMap == null) {
+            Log.w("RideRequests", "GoogleMap is null, cannot display markers");
+            return;
+        }
+        
+        Log.d("RideRequests", "Processing " + pendingRideRequests.size() + " ride requests");
         
         for (RideRequest rideRequest : pendingRideRequests) {
+            Log.d("RideRequests", "Processing ride request: " + rideRequest.rideId);
             if (rideRequest.pickupLocation != null) {
                 LatLng pickupLocation = new LatLng(rideRequest.pickupLocation.lat, rideRequest.pickupLocation.lng);
+                Log.d("RideRequests", "Adding marker at: " + pickupLocation.latitude + ", " + pickupLocation.longitude);
                 
-                // Create custom marker
+                // Create custom marker with blue color
                 com.google.android.gms.maps.model.MarkerOptions markerOptions = new com.google.android.gms.maps.model.MarkerOptions()
                     .position(pickupLocation)
                     .title("Ride Request")
-                    .snippet("Tap to view details");
+                    .snippet("Tap to view details")
+                    .icon(com.google.android.gms.maps.model.BitmapDescriptorFactory.defaultMarker(com.google.android.gms.maps.model.BitmapDescriptorFactory.HUE_BLUE));
                 
                 // Add marker to map
                 com.google.android.gms.maps.model.Marker marker = googleMap.addMarker(markerOptions);
                 if (marker != null) {
                     marker.setTag(rideRequest);
                     rideRequestMarkers.put(rideRequest.rideId, marker);
+                    Log.d("RideRequests", "Marker added successfully for ride: " + rideRequest.rideId);
+                } else {
+                    Log.e("RideRequests", "Failed to add marker for ride: " + rideRequest.rideId);
                 }
+            } else {
+                Log.w("RideRequests", "Ride request has no pickup location: " + rideRequest.rideId);
             }
         }
+        
+        Log.d("RideRequests", "Total markers displayed: " + rideRequestMarkers.size());
+    }
+    
+    /**
+     * Create test ride requests for debugging
+     */
+    private void createTestRideRequests() {
+        Log.d("RideRequests", "Creating test ride requests...");
+        
+        // Create test ride request 1
+        RideRequest.LocationData pickup1 = new RideRequest.LocationData(-17.82486, 31.05343, "Test Pickup 1");
+        RideRequest.LocationData dest1 = new RideRequest.LocationData(-17.82765, 31.05612, "Test Destination 1");
+        
+        RideRequest testRide1 = new RideRequest();
+        testRide1.rideId = "test_ride_1";
+        testRide1.commuterId = "test_commuter_1";
+        testRide1.driverId = "test_driver_1";
+        testRide1.pickupLocation = pickup1;
+        testRide1.destination = dest1;
+        testRide1.status = "pending";
+        testRide1.people = 2;
+        testRide1.priceEach = 5.50;
+        testRide1.timestamp = System.currentTimeMillis();
+        
+        // Create test ride request 2
+        RideRequest.LocationData pickup2 = new RideRequest.LocationData(-17.82000, 31.05000, "Test Pickup 2");
+        RideRequest.LocationData dest2 = new RideRequest.LocationData(-17.83000, 31.06000, "Test Destination 2");
+        
+        RideRequest testRide2 = new RideRequest();
+        testRide2.rideId = "test_ride_2";
+        testRide2.commuterId = "test_commuter_2";
+        testRide2.driverId = "test_driver_2";
+        testRide2.pickupLocation = pickup2;
+        testRide2.destination = dest2;
+        testRide2.status = "pending";
+        testRide2.people = 1;
+        testRide2.priceEach = 4.00;
+        testRide2.timestamp = System.currentTimeMillis();
+        
+        // Add test rides to the list
+        pendingRideRequests.add(testRide1);
+        pendingRideRequests.add(testRide2);
+        
+        Log.d("RideRequests", "Created " + pendingRideRequests.size() + " test ride requests");
+        
+        // Display the test markers
+        displayRideRequestMarkers();
     }
     
     /**
