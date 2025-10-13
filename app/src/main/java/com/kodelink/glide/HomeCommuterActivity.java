@@ -148,6 +148,14 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private com.google.firebase.database.ValueEventListener activeRideListener;
     private boolean hasActiveRide = false;
     
+    // Timeout handling
+    private android.os.Handler timeoutHandler;
+    private Runnable timeoutRunnable;
+    private Runnable countdownRunnable;
+    private long rideRequestStartTime;
+    private static final long TIMEOUT_DURATION = 2 * 60 * 1000; // 2 minutes in milliseconds
+    private int countdownSeconds = 120; // 2 minutes in seconds
+    
     // Driver selection card variables
     private View driverSelectionCard;
     private TextView tvDriverName;
@@ -167,6 +175,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     // Ride request sent card variables
     private View rideRequestSentCard;
     private TextView tvDriverNameSent;
+    private TextView tvCountdownTimer;
     private Button btnCancelRequest;
     private Animation fadeInAnimation;
     private Animation fadeOutAnimation;
@@ -197,6 +206,9 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
 
         // Initialize Firebase service
         firebaseService = FirebaseService.getInstance();
+        
+        // Initialize timeout handler
+        timeoutHandler = new android.os.Handler();
         
         // Initialize Places API
         initializePlacesAPI();
@@ -388,6 +400,8 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         if (activeRideListener != null) {
             firebaseService.removeRideRequestsListener(activeRideListener);
         }
+        // Stop timeout timer
+        stopTimeoutTimer();
     }
 
     @Override
@@ -909,11 +923,25 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                     pricePerPerson
                 ).addOnSuccessListener(aVoid -> {
                     Log.d("RideRequest", "Ride request created successfully");
-                    showRideRequestSentMessage(driver.name);
+                    
+                    // Create a temporary active ride request for the timer FIRST
+                    activeRideRequest = new RideRequest();
+                    activeRideRequest.rideId = "ride_" + System.currentTimeMillis();
+                    activeRideRequest.status = "pending";
+                    activeRideRequest.commuterId = commuterId;
+                    activeRideRequest.driverId = driver.driverId;
+                    
+                    Log.d("RideRequest", "Active ride request created: " + activeRideRequest.rideId + ", status: " + activeRideRequest.status);
+                    
                     // Set active ride state
                     hasActiveRide = true;
-                    // Note: We'll need to get the rideId from the response or generate it consistently
-                    showWaitingScreen("ride_" + System.currentTimeMillis());
+                    
+                    // Start timeout timer
+                    startTimeoutTimer();
+                    
+                    // Show UI
+                    showRideRequestSentMessage(driver.name);
+                    showWaitingScreen(activeRideRequest.rideId);
                 }).addOnFailureListener(e -> {
                     Log.e("RideRequest", "Failed to create ride request", e);
                     Toast.makeText(HomeCommuterActivity.this, "Failed to send ride request: " + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -966,6 +994,18 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                                 // Reset active ride state
                                 hasActiveRide = false;
                                 activeRideRequest = null;
+                                // Stop timeout timer
+                                stopTimeoutTimer();
+                                break;
+                            case "timeout":
+                                Toast.makeText(HomeCommuterActivity.this, "Ride request timed out. No driver accepted within 2 minutes.", Toast.LENGTH_LONG).show();
+                                // Reset active ride state
+                                hasActiveRide = false;
+                                activeRideRequest = null;
+                                // Stop timeout timer
+                                stopTimeoutTimer();
+                                // Show nearby drivers again
+                                showNearbyDrivers();
                                 break;
                         }
                     }
@@ -1507,6 +1547,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         
         // Initialize card views
         tvDriverNameSent = rideRequestSentCard.findViewById(R.id.tvDriverNameSent);
+        tvCountdownTimer = rideRequestSentCard.findViewById(R.id.tvCountdownTimer);
         btnCancelRequest = rideRequestSentCard.findViewById(R.id.btnCancelRequest);
         
         // Initialize animations
@@ -1541,13 +1582,24 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
      * Show the ride request sent card with fade in animation
      */
     private void showRideRequestSentCard(String driverName) {
+        Log.d("RideRequestCard", "Showing ride request sent card for driver: " + driverName);
         if (driverName != null) {
             tvDriverNameSent.setText(driverName);
+        }
+        
+        // Initialize countdown timer display
+        if (tvCountdownTimer != null) {
+            tvCountdownTimer.setText("2:00");
+            tvCountdownTimer.setTextColor(getResources().getColor(R.color.purple_500));
+            Log.d("RideRequestCard", "Countdown timer initialized");
+        } else {
+            Log.e("RideRequestCard", "Countdown timer TextView is null!");
         }
         
         // Show card with animation
         rideRequestSentCard.setVisibility(View.VISIBLE);
         rideRequestSentCard.startAnimation(fadeInAnimation);
+        Log.d("RideRequestCard", "Card made visible and animation started");
     }
     
     /**
@@ -1720,6 +1772,14 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                     // Reset active ride state
                     hasActiveRide = false;
                     activeRideRequest = null;
+                    stopTimeoutTimer();
+                    break;
+                case "timeout":
+                    Toast.makeText(this, "Ride request timed out. You can now request another ride.", Toast.LENGTH_LONG).show();
+                    // Reset active ride state
+                    hasActiveRide = false;
+                    activeRideRequest = null;
+                    stopTimeoutTimer();
                     break;
             }
         }
@@ -1737,6 +1797,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                         Toast.makeText(this, "Ride request cancelled successfully", Toast.LENGTH_SHORT).show();
                         hasActiveRide = false;
                         activeRideRequest = null;
+                        stopTimeoutTimer();
                     })
                     .addOnFailureListener(e -> {
                         Toast.makeText(this, "Failed to cancel ride request: " + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -1747,6 +1808,147 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         } else {
             Toast.makeText(this, "No active ride request to cancel", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    /**
+     * Start the timeout timer for ride requests
+     */
+    private void startTimeoutTimer() {
+        rideRequestStartTime = System.currentTimeMillis();
+        Log.d("Timeout", "Starting timeout timer at: " + rideRequestStartTime);
+        
+        // Remove any existing timeout runnable
+        if (timeoutRunnable != null) {
+            timeoutHandler.removeCallbacks(timeoutRunnable);
+        }
+        if (countdownRunnable != null) {
+            timeoutHandler.removeCallbacks(countdownRunnable);
+        }
+        
+        // Start countdown display
+        startCountdownDisplay();
+        
+        timeoutRunnable = new Runnable() {
+            @Override
+            public void run() {
+                // Check if ride is still pending after 2 minutes
+                if (activeRideRequest != null && "pending".equals(activeRideRequest.status)) {
+                    Log.d("Timeout", "Ride request timed out after 2 minutes");
+                    
+                    // Timeout the ride request
+                    if (activeRideRequest.rideId != null) {
+                        firebaseService.timeoutRideRequest(activeRideRequest.rideId)
+                            .addOnSuccessListener(aVoid -> {
+                                Log.d("Timeout", "Ride request timed out successfully");
+                                Toast.makeText(HomeCommuterActivity.this, "Ride request timed out. No driver accepted within 2 minutes.", Toast.LENGTH_LONG).show();
+                                hasActiveRide = false;
+                                activeRideRequest = null;
+                                showNearbyDrivers();
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e("Timeout", "Failed to timeout ride request", e);
+                                Toast.makeText(HomeCommuterActivity.this, "Failed to timeout ride request: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                            });
+                    }
+                }
+            }
+        };
+        
+        // Schedule timeout after 2 minutes
+        timeoutHandler.postDelayed(timeoutRunnable, TIMEOUT_DURATION);
+        Log.d("Timeout", "Timeout timer started for 2 minutes");
+    }
+
+    /**
+     * Start countdown display
+     */
+    private void startCountdownDisplay() {
+        Log.d("Countdown", "Starting countdown display");
+        
+        // Reset countdown seconds
+        countdownSeconds = 120; // 2 minutes
+        
+        // Remove any existing countdown runnable first
+        if (countdownRunnable != null) {
+            timeoutHandler.removeCallbacks(countdownRunnable);
+        }
+        
+        countdownRunnable = new Runnable() {
+            @Override
+            public void run() {
+                Log.d("Countdown", "Countdown runnable executing - countdownSeconds: " + countdownSeconds + 
+                      ", activeRideRequest: " + (activeRideRequest != null) + 
+                      ", status: " + (activeRideRequest != null ? activeRideRequest.status : "null") + 
+                      ", tvCountdownTimer: " + (tvCountdownTimer != null));
+                
+                Log.d("Countdown", "Checking conditions - activeRideRequest != null: " + (activeRideRequest != null) + 
+                      ", status equals pending: " + (activeRideRequest != null && "pending".equals(activeRideRequest.status)) + 
+                      ", tvCountdownTimer != null: " + (tvCountdownTimer != null) + 
+                      ", countdownSeconds > 0: " + (countdownSeconds > 0));
+                
+                // Fallback: if activeRideRequest is null but we have an active ride, create it
+                if (activeRideRequest == null && hasActiveRide) {
+                    Log.d("Countdown", "Creating fallback activeRideRequest");
+                    activeRideRequest = new RideRequest();
+                    activeRideRequest.status = "pending";
+                }
+                
+                if (tvCountdownTimer != null && countdownSeconds > 0) {
+                    int minutes = countdownSeconds / 60;
+                    int seconds = countdownSeconds % 60;
+                    
+                    String timeText = String.format("%d:%02d", minutes, seconds);
+                    tvCountdownTimer.setText(timeText);
+                    
+                    Log.d("Countdown", "Updated timer text: " + timeText + " (countdownSeconds: " + countdownSeconds + ")");
+                    
+                    // Change color as time runs out
+                    if (countdownSeconds <= 30) { // Less than 30 seconds
+                        tvCountdownTimer.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
+                    } else if (countdownSeconds <= 60) { // Less than 1 minute
+                        tvCountdownTimer.setTextColor(getResources().getColor(android.R.color.holo_orange_dark));
+                    } else {
+                        tvCountdownTimer.setTextColor(getResources().getColor(R.color.purple_500));
+                    }
+                    
+                    // Decrement counter
+                    countdownSeconds--;
+                    
+                    // Schedule next update in 1 second
+                    timeoutHandler.postDelayed(countdownRunnable, 1000);
+                    Log.d("Countdown", "Scheduled next update in 1 second, new countdownSeconds: " + countdownSeconds);
+                } else {
+                    if (countdownSeconds <= 0) {
+                        tvCountdownTimer.setText("0:00");
+                        tvCountdownTimer.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
+                        Log.d("Countdown", "Timer reached 0:00");
+                    } else {
+                        Log.d("Countdown", "Countdown stopped - conditions not met, countdownSeconds: " + countdownSeconds);
+                    }
+                }
+            }
+        };
+        
+        // Start countdown immediately
+        timeoutHandler.post(countdownRunnable);
+        Log.d("Countdown", "Countdown runnable posted to handler");
+    }
+
+    /**
+     * Stop the timeout timer
+     */
+    private void stopTimeoutTimer() {
+        if (timeoutRunnable != null) {
+            timeoutHandler.removeCallbacks(timeoutRunnable);
+            timeoutRunnable = null;
+        }
+        if (countdownRunnable != null) {
+            timeoutHandler.removeCallbacks(countdownRunnable);
+            countdownRunnable = null;
+        }
+        // Reset countdown seconds
+        countdownSeconds = 120;
+        Log.d("Timeout", "Timeout timer and countdown stopped");
     }
 
 }

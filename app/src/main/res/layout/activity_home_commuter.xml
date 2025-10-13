@@ -554,6 +554,18 @@
                 android:textSize="14sp"
                 android:textColor="@color/gray_600"
                 android:gravity="center"
+                android:layout_marginBottom="8dp" />
+
+            <!-- Countdown Timer -->
+            <TextView
+                android:id="@+id/tvCountdownTimer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="2:00"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/purple_500"
+                android:gravity="center"
                 android:layout_marginBottom="16dp" />
 
             <!-- Cancel Button -->

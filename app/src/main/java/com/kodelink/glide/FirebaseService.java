@@ -728,6 +728,39 @@ public class FirebaseService {
         return updateRideRequestStatus(rideId, "cancelled");
     }
 
+    /**
+     * Timeout a ride request (automatic cancellation after 2 minutes)
+     */
+    public Task<Void> timeoutRideRequest(String rideId) {
+        // Update status to timeout in both databases
+        return updateRideRequestStatus(rideId, "timeout");
+    }
+
+    /**
+     * Check for expired ride requests and clean them up
+     */
+    public Task<Void> cleanupExpiredRideRequests() {
+        long twoMinutesAgo = System.currentTimeMillis() - (2 * 60 * 1000); // 2 minutes ago
+        
+        return firestore.collection("rideRequests")
+            .whereEqualTo("status", "pending")
+            .whereLessThan("timestamp", twoMinutesAgo)
+            .get()
+            .continueWithTask(task -> {
+                if (task.isSuccessful() && !task.getResult().isEmpty()) {
+                    List<Task<Void>> timeoutTasks = new ArrayList<>();
+                    for (DocumentSnapshot doc : task.getResult().getDocuments()) {
+                        String rideId = doc.getString("rideId");
+                        if (rideId != null) {
+                            timeoutTasks.add(timeoutRideRequest(rideId));
+                        }
+                    }
+                    return Tasks.whenAll(timeoutTasks);
+                }
+                return Tasks.forResult(null);
+            });
+    }
+
     // ==================== CALLBACK INTERFACES ====================
     
     public interface DatabaseCallback {
