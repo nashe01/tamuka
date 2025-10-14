@@ -405,16 +405,29 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
 
 
     private void showLogoutConfirmationDialog() {
-        new androidx.appcompat.app.AlertDialog.Builder(this)
+        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(this)
                 .setTitle("Logout")
                 .setMessage("Are you sure you want to logout?")
-                .setPositiveButton("Yes", (dialog, which) -> {
+                .setPositiveButton("Yes", (dialogInterface, which) -> {
                     logout();
                 })
-                .setNegativeButton("No", (dialog, which) -> {
-                    dialog.dismiss();
+                .setNegativeButton("No", (dialogInterface, which) -> {
+                    dialogInterface.dismiss();
                 })
-                .show();
+                .create();
+        
+        dialog.show();
+        
+        // Apply primary color to title
+        dialog.getWindow().getDecorView().post(() -> {
+            int titleId = getResources().getIdentifier("alertTitle", "id", "android");
+            if (titleId != 0) {
+                android.widget.TextView titleView = dialog.findViewById(titleId);
+                if (titleView != null) {
+                    titleView.setTextColor(getResources().getColor(R.color.purple_500));
+                }
+            }
+        });
     }
 
     private void logout() {
