@@ -5,25 +5,17 @@
     This layout defines the main interface for commuters in the Swift Ride app.
     It includes:
     - Full-screen Google Maps view for driver location display
-    - Navigation drawer for menu access
+    - Logout button for user authentication
     - Search bar for destination input
     - Sliding driver selection card
     - Ride request sent confirmation card
     
     Layout Structure:
-    - DrawerLayout (root) - Enables navigation drawer functionality
-    - ConstraintLayout (main content) - Contains map and UI elements
-    - NavigationView - Side menu with user profile and options
+    - ConstraintLayout (root) - Contains map and UI elements
 -->
-<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/drawerLayout"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/white">
-
-<androidx.constraintlayout.widget.ConstraintLayout
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/white">
@@ -37,6 +29,40 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Map Loading Overlay -->
+    <LinearLayout
+        android:id="@+id/mapLoadingOverlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="@color/white"
+        android:visibility="visible"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Loading Progress Bar -->
+        <ProgressBar
+            android:id="@+id/mapLoadingProgress"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginBottom="16dp"
+            android:indeterminateTint="@color/purple_500" />
+
+        <!-- Loading Text -->
+        <TextView
+            android:id="@+id/mapLoadingText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Loading map..."
+            android:textColor="@color/purple_500"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
 
     <!-- Top Bar Container -->
     <LinearLayout
@@ -52,13 +78,13 @@
 
         <!-- Menu Button -->
         <ImageButton
-            android:id="@+id/btnMenu"
+            android:id="@+id/btnLogout"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_marginEnd="8dp"
             android:background="@drawable/menu_button_bg"
-            android:src="@drawable/menu_icon"
-            android:contentDescription="Menu"
+            android:src="@drawable/ic_logout"
+            android:contentDescription="Logout"
             android:scaleType="centerInside"
             android:padding="12dp" />
 
@@ -587,14 +613,3 @@
     </androidx.cardview.widget.CardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
-
-<!-- Navigation Drawer -->
-<com.google.android.material.navigation.NavigationView
-    android:id="@+id/navigationView"
-    android:layout_width="240dp"
-    android:layout_height="match_parent"
-    android:layout_gravity="start"
-    app:headerLayout="@layout/nav_header"
-    app:menu="@menu/nav_menu" />
-
-</androidx.drawerlayout.widget.DrawerLayout>

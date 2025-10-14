@@ -11,13 +11,14 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.RatingBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -28,8 +29,6 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.core.view.GravityCompat;
-import androidx.drawerlayout.widget.DrawerLayout;
 
 // Google Play Services imports for location and maps
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -56,7 +55,6 @@ import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRe
 import com.google.android.libraries.places.api.net.PlacesClient;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
-import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.auth.FirebaseAuth;
@@ -104,7 +102,7 @@ import org.json.JSONObject;
  * @author Swift Ride Development Team
  * @version 1.0
  */
-public class HomeCommuterActivity extends AppCompatActivity implements OnMapReadyCallback, NavigationView.OnNavigationItemSelectedListener, GoogleMap.OnMapLongClickListener {
+public class HomeCommuterActivity extends AppCompatActivity implements OnMapReadyCallback, GoogleMap.OnMapLongClickListener {
 
     // Permission request code for location access
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
@@ -113,12 +111,16 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private MapView mapView;                    // Map view container
     private GoogleMap googleMap;                // Google Maps instance
     private FusedLocationProviderClient fusedLocationClient;  // Location services client
+    
+    // Map loading state
+    private LinearLayout mapLoadingOverlay;     // Loading overlay
+    private ProgressBar mapLoadingProgress;    // Loading progress bar
+    private TextView mapLoadingText;           // Loading text
+    private boolean isMapLoaded = false;       // Map loading state
     // UI components for navigation and search
-    private ImageButton btnMenu;                // Menu button to open navigation drawer
+    private ImageButton btnLogout;              // Logout button
     private TextInputEditText etSearch;         // Search input field for destinations
     private TextInputLayout searchLayout;       // Search input layout container
-    private DrawerLayout drawerLayout;          // Navigation drawer layout
-    private NavigationView navigationView;      // Navigation drawer view
     // Shared preferences for storing user data
     private SharedPreferences prefs;
     
@@ -192,12 +194,15 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
 
         // Initialize views
         mapView = findViewById(R.id.mapView);
-        btnMenu = findViewById(R.id.btnMenu);
+        btnLogout = findViewById(R.id.btnLogout);
         etSearch = findViewById(R.id.etSearch);
         searchLayout = findViewById(R.id.searchLayout);
         rvSuggestions = findViewById(R.id.rvSuggestions);
-        drawerLayout = findViewById(R.id.drawerLayout);
-        navigationView = findViewById(R.id.navigationView);
+        
+        // Initialize map loading overlay
+        mapLoadingOverlay = findViewById(R.id.mapLoadingOverlay);
+        mapLoadingProgress = findViewById(R.id.mapLoadingProgress);
+        mapLoadingText = findViewById(R.id.mapLoadingText);
         
         // Initialize driver selection card
         initializeDriverSelectionCard();
@@ -234,19 +239,14 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         mapView.onCreate(savedInstanceState);
         mapView.getMapAsync(this);
 
-        // Set up navigation drawer
-        navigationView.setNavigationItemSelectedListener(this);
-        
         // Set up button listeners
-        btnMenu.setOnClickListener(v -> {
-            drawerLayout.openDrawer(GravityCompat.START);
+        btnLogout.setOnClickListener(v -> {
+            showLogoutConfirmationDialog();
         });
 
         // Set up search functionality
         setupSearchFunctionality();
 
-        // Update header with user role
-        updateNavigationHeader();
 
         // Check for active rides
         checkForActiveRides();
@@ -287,6 +287,23 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         googleMap.setOnMapClickListener(latLng -> {
             hideSuggestions();
             hideDriverSelectionCard();
+        });
+        
+        // Set up map camera change listener to detect when tiles are loaded
+        googleMap.setOnCameraMoveListener(() -> {
+            if (!isMapLoaded) {
+                // Map is starting to load, update loading text
+                mapLoadingText.setText("Loading map tiles...");
+            }
+        });
+        
+        // Set up map camera idle listener to detect when map is fully loaded
+        googleMap.setOnCameraIdleListener(() -> {
+            if (!isMapLoaded) {
+                // Map tiles are loaded, hide loading overlay
+                hideMapLoadingOverlay();
+                isMapLoaded = true;
+            }
         });
     }
 
@@ -415,81 +432,40 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         mapView.onLowMemory();
     }
 
-    @Override
-    public boolean onNavigationItemSelected(@NonNull MenuItem item) {
-        int id = item.getItemId();
+
+
+    private void showLogoutConfirmationDialog() {
+        android.app.Dialog dialog = new android.app.Dialog(this);
+        android.view.LayoutInflater inflater = getLayoutInflater();
+        android.view.View dialogView = inflater.inflate(R.layout.custom_logout_dialog, null);
         
-        if (id == R.id.nav_home) {
-            // Already on home screen, just close drawer
-            Toast.makeText(this, "You're already on the home screen", Toast.LENGTH_SHORT).show();
-        } else if (id == R.id.nav_ride_history) {
-            Intent intent = new Intent(this, RideHistoryActivity.class);
-            startActivity(intent);
-        } else if (id == R.id.nav_notifications) {
-            Toast.makeText(this, "Notifications clicked", Toast.LENGTH_SHORT).show();
-        } else if (id == R.id.nav_settings) {
-            Toast.makeText(this, "Settings clicked", Toast.LENGTH_SHORT).show();
-        } else if (id == R.id.nav_logout) {
+        dialog.setContentView(dialogView);
+        
+        // Set up button listeners
+        android.widget.Button btnCancel = dialogView.findViewById(R.id.btnCancel);
+        android.widget.Button btnConfirm = dialogView.findViewById(R.id.btnConfirm);
+        
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+        btnConfirm.setOnClickListener(v -> {
+            dialog.dismiss();
             logout();
+        });
+        
+        // Set window properties to respect custom width
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+            dialog.getWindow().setLayout(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
         }
         
-        drawerLayout.closeDrawer(GravityCompat.START);
-        return true;
+        dialog.show();
     }
 
-    private void updateNavigationHeader() {
-        String currentUserPhone = prefs.getString("current_user_phone", "");
-        String role = prefs.getString(currentUserPhone + "_role", "commuter");
-        
-        TextView tvUserRole = navigationView.getHeaderView(0).findViewById(R.id.tvUserRole);
-        if (tvUserRole != null) {
-            tvUserRole.setText(role.equals("driver") ? "Driver" : "Commuter");
-        }
-        
-        // Update user name from database
-        TextView tvUserName = navigationView.getHeaderView(0).findViewById(R.id.tvUserName);
-        if (tvUserName != null) {
-            // Get current user's entity ID from database
-            firebaseService.getCurrentUserEntityId()
-                .addOnSuccessListener(entityId -> {
-                    if (entityId != null) {
-                        if (role.equals("driver")) {
-                            // Fetch driver name from database
-                            firebaseService.getDriverDetails(entityId)
-                                .addOnSuccessListener(driver -> {
-                                    if (driver != null && driver.name != null) {
-                                        tvUserName.setText(driver.name);
-                                    } else {
-                                        tvUserName.setText("Driver");
-                                    }
-                                })
-                                .addOnFailureListener(e -> {
-                                    Log.e("NavigationHeader", "Failed to get driver details", e);
-                                    tvUserName.setText("Driver");
-                                });
-                        } else {
-                            // Fetch commuter name from database
-                            firebaseService.getCommuterDetails(entityId)
-                                .addOnSuccessListener(commuter -> {
-                                    if (commuter != null && commuter.name != null) {
-                                        tvUserName.setText(commuter.name);
-                                    } else {
-                                        tvUserName.setText("Commuter");
-                                    }
-                                })
-                                .addOnFailureListener(e -> {
-                                    Log.e("NavigationHeader", "Failed to get commuter details", e);
-                                    tvUserName.setText("Commuter");
-                                });
-                        }
-                    } else {
-                        tvUserName.setText("User");
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    Log.e("NavigationHeader", "Failed to get current user entity ID", e);
-                    tvUserName.setText("User");
-                });
+    private void hideMapLoadingOverlay() {
+        if (mapLoadingOverlay != null) {
+            mapLoadingOverlay.animate()
+                    .alpha(0f)
+                    .setDuration(300)
+                    .withEndAction(() -> mapLoadingOverlay.setVisibility(View.GONE));
         }
     }
 

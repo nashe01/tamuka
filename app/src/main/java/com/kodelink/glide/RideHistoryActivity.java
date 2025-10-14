@@ -4,7 +4,8 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
-
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.ImageButton;
 
 import androidx.annotation.NonNull;
@@ -24,6 +25,8 @@ public class RideHistoryActivity extends AppCompatActivity {
     private FirebaseService firebaseService;
     private SharedPreferences prefs;
     private ImageButton btnBack;
+    private ProgressBar progressBar;
+    private TextView tvEmptyState;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,6 +36,8 @@ public class RideHistoryActivity extends AppCompatActivity {
         // Initialize views
         btnBack = findViewById(R.id.btnBack);
         rvRideHistory = findViewById(R.id.rvRideHistory);
+        progressBar = findViewById(R.id.progressBar);
+        tvEmptyState = findViewById(R.id.tvEmptyState);
 
         // Set up back button
         btnBack.setOnClickListener(v -> onBackPressed());
@@ -47,6 +52,18 @@ public class RideHistoryActivity extends AppCompatActivity {
         rvRideHistory.setLayoutManager(new LinearLayoutManager(this));
         rvRideHistory.setAdapter(adapter);
 
+        // Show loading state
+        showLoadingState();
+
+        // Debug: Check total ride count
+        firebaseService.getTotalRideCount()
+            .addOnSuccessListener(count -> {
+                Log.d(TAG, "Total rides in database: " + count);
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "Failed to get total ride count", e);
+            });
+
         // Load ride history
         loadRideHistory();
     }
@@ -56,74 +73,142 @@ public class RideHistoryActivity extends AppCompatActivity {
         String currentUserPhone = prefs.getString("current_user_phone", "");
         String role = prefs.getString(currentUserPhone + "_role", "commuter");
 
-        // Get current user's entity ID
+        Log.d(TAG, "Loading ride history for phone: " + currentUserPhone + ", role: " + role);
+
+        // First try Firebase Auth
         firebaseService.getCurrentUserEntityId()
             .addOnSuccessListener(entityId -> {
                 if (entityId != null) {
+                    Log.d(TAG, "Got entity ID from Firebase Auth: " + entityId);
                     if (role.equals("driver")) {
                         loadDriverRideHistory(entityId);
                     } else {
                         loadCommuterRideHistory(entityId);
                     }
                 } else {
-                    Toast.makeText(this, "Unable to load ride history", Toast.LENGTH_SHORT).show();
+                    // Fallback to mock authentication
+                    Log.d(TAG, "Firebase Auth failed, trying mock authentication");
+                    loadRideHistoryWithMockAuth(currentUserPhone, role);
                 }
             })
             .addOnFailureListener(e -> {
-                Log.e(TAG, "Failed to get current user entity ID", e);
-                Toast.makeText(this, "Failed to load ride history", Toast.LENGTH_SHORT).show();
+                Log.e(TAG, "Firebase Auth failed, trying mock authentication", e);
+                loadRideHistoryWithMockAuth(currentUserPhone, role);
+            });
+    }
+    
+    private void loadRideHistoryWithMockAuth(String phone, String role) {
+        firebaseService.getCurrentUserEntityIdByPhone(phone, role)
+            .addOnSuccessListener(entityId -> {
+                if (entityId != null) {
+                    Log.d(TAG, "Got entity ID from mock auth: " + entityId);
+                    if (role.equals("driver")) {
+                        loadDriverRideHistory(entityId);
+                    } else {
+                        loadCommuterRideHistory(entityId);
+                    }
+                } else {
+                    Log.e(TAG, "No entity ID found for phone: " + phone + ", role: " + role);
+                    showErrorState("User profile not found. Please register again.");
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "Failed to get entity ID from mock auth", e);
+                showErrorState("Failed to load ride history");
             });
     }
 
     private void loadDriverRideHistory(String driverId) {
-        firebaseService.getDriverRideHistory(driverId)
-            .addOnSuccessListener(rides -> {
+        Log.d(TAG, "Loading driver ride history for driverId: " + driverId);
+        firebaseService.getEnhancedDriverRideHistory(driverId)
+            .addOnSuccessListener(historyItems -> {
+                Log.d(TAG, "Loaded " + historyItems.size() + " driver ride history items");
                 rideHistoryList.clear();
-                for (RideRequest ride : rides) {
-                    RideHistoryItem item = new RideHistoryItem();
-                    item.rideId = ride.rideId;
-                    item.pickupLocation = ride.pickupLocation.address;
-                    item.destinationLocation = ride.destination.address;
-                    item.status = ride.status;
-                    item.timestamp = ride.timestamp;
-                    item.people = ride.people;
-                    item.priceEach = ride.priceEach;
-                    item.commuterId = ride.commuterId;
-                    item.driverId = ride.driverId;
-                    item.userRole = "driver";
-                    rideHistoryList.add(item);
-                }
-                adapter.notifyDataSetChanged();
+                rideHistoryList.addAll(historyItems);
+                
+                // Load user names for each ride
+                loadUserNamesForHistory();
             })
             .addOnFailureListener(e -> {
                 Log.e(TAG, "Failed to load driver ride history", e);
-                Toast.makeText(this, "Failed to load ride history", Toast.LENGTH_SHORT).show();
+                showErrorState("Failed to load ride history");
             });
     }
 
     private void loadCommuterRideHistory(String commuterId) {
-        firebaseService.getCommuterRideHistory(commuterId)
-            .addOnSuccessListener(rides -> {
+        Log.d(TAG, "Loading commuter ride history for commuterId: " + commuterId);
+        firebaseService.getEnhancedCommuterRideHistory(commuterId)
+            .addOnSuccessListener(historyItems -> {
+                Log.d(TAG, "Loaded " + historyItems.size() + " commuter ride history items");
                 rideHistoryList.clear();
-                for (RideRequest ride : rides) {
-                    RideHistoryItem item = new RideHistoryItem();
-                    item.rideId = ride.rideId;
-                    item.pickupLocation = ride.pickupLocation.address;
-                    item.destinationLocation = ride.destination.address;
-                    item.status = ride.status;
-                    item.timestamp = ride.timestamp;
-                    item.people = ride.people;
-                    item.priceEach = ride.priceEach;
-                    item.commuterId = ride.commuterId;
-                    item.driverId = ride.driverId;
-                    item.userRole = "commuter";
-                    rideHistoryList.add(item);
-                }
-                adapter.notifyDataSetChanged();
+                rideHistoryList.addAll(historyItems);
+                
+                // Load user names for each ride
+                loadUserNamesForHistory();
             })
             .addOnFailureListener(e -> {
                 Log.e(TAG, "Failed to load commuter ride history", e);
-                Toast.makeText(this, "Failed to load ride history", Toast.LENGTH_SHORT).show();
+                showErrorState("Failed to load ride history");
             });
+    }
+    
+    private void loadUserNamesForHistory() {
+        // Load names for all rides
+        for (RideHistoryItem item : rideHistoryList) {
+            if (item.userRole.equals("driver")) {
+                // Load commuter name
+                firebaseService.getUserName(item.commuterId, "commuter")
+                    .addOnSuccessListener(name -> {
+                        item.commuterName = name;
+                        adapter.notifyDataSetChanged();
+                    });
+            } else {
+                // Load driver name
+                firebaseService.getUserName(item.driverId, "driver")
+                    .addOnSuccessListener(name -> {
+                        item.driverName = name;
+                        adapter.notifyDataSetChanged();
+                    });
+            }
+        }
+        
+        // Update UI
+        updateUI();
+    }
+    
+    private void updateUI() {
+        if (rideHistoryList.isEmpty()) {
+            showEmptyState();
+        } else {
+            showContentState();
+        }
+        adapter.notifyDataSetChanged();
+    }
+    
+    private void showLoadingState() {
+        progressBar.setVisibility(android.view.View.VISIBLE);
+        rvRideHistory.setVisibility(android.view.View.GONE);
+        tvEmptyState.setVisibility(android.view.View.GONE);
+    }
+    
+    private void showContentState() {
+        progressBar.setVisibility(android.view.View.GONE);
+        rvRideHistory.setVisibility(android.view.View.VISIBLE);
+        tvEmptyState.setVisibility(android.view.View.GONE);
+    }
+    
+    private void showEmptyState() {
+        progressBar.setVisibility(android.view.View.GONE);
+        rvRideHistory.setVisibility(android.view.View.GONE);
+        tvEmptyState.setVisibility(android.view.View.VISIBLE);
+        tvEmptyState.setText("No ride history found");
+    }
+    
+    private void showErrorState(String message) {
+        progressBar.setVisibility(android.view.View.GONE);
+        rvRideHistory.setVisibility(android.view.View.GONE);
+        tvEmptyState.setVisibility(android.view.View.VISIBLE);
+        tvEmptyState.setText(message);
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 }
