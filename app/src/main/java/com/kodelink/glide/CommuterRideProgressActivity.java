@@ -266,11 +266,11 @@ public class CommuterRideProgressActivity extends AppCompatActivity implements O
         
         // Update complete button based on commuter status
         if (commuterReady) {
-            btnCompleteRide.setText("I'm Ready ✓");
+            btnCompleteRide.setText("Complete Ride ✓");
             btnCompleteRide.setEnabled(false);
             btnCompleteRide.setBackgroundResource(R.drawable.button_confirm_background);
         } else {
-            btnCompleteRide.setText("Mark Me Ready");
+            btnCompleteRide.setText("Complete Ride");
             btnCompleteRide.setEnabled(true);
             btnCompleteRide.setBackgroundResource(R.drawable.button_confirm_background);
         }

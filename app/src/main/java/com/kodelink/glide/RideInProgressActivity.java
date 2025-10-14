@@ -267,11 +267,11 @@ public class RideInProgressActivity extends AppCompatActivity implements OnMapRe
         
         // Update complete button based on driver status
         if (driverReady) {
-            btnCompleteRide.setText("I'm Ready ✓");
+            btnCompleteRide.setText("completion ready ✓");
             btnCompleteRide.setEnabled(false);
             btnCompleteRide.setBackgroundResource(R.drawable.button_confirm_background);
         } else {
-            btnCompleteRide.setText("Mark Me Ready");
+            btnCompleteRide.setText("Complete Ride");
             btnCompleteRide.setEnabled(true);
             btnCompleteRide.setBackgroundResource(R.drawable.button_confirm_background);
         }
