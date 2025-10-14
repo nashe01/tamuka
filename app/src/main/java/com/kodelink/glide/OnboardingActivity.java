@@ -92,6 +92,9 @@ public class OnboardingActivity extends AppCompatActivity implements View.OnClic
                 currentPage = position;
                 updatePageIndicators();
                 updateButtonText();
+                
+                // Animation will be triggered by fragment lifecycle methods
+                // No need to manually trigger here
             }
         });
     }
@@ -149,8 +152,8 @@ public class OnboardingActivity extends AppCompatActivity implements View.OnClic
      * Start animation for the first page
      */
     private void startFirstPageAnimation() {
-        // Animation listeners are now set up automatically by the adapter
-        // No additional setup needed
+        // Animation will be triggered by fragment lifecycle methods
+        // No manual triggering needed
     }
     
     @Override

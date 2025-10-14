@@ -43,6 +43,12 @@ public class OnboardingFragment extends Fragment {
     private SimpleTypewriterTextView tvDescription;
     private ImageView ivIllustration;
     
+    // Animation state
+    private boolean hasAnimationStarted = false;
+    private String pendingTitle = "";
+    private String pendingDescription = "";
+    private int pendingScreenNumber = 1;
+    
     // Callback interface for animation completion
     public interface OnAnimationCompleteListener {
         void onAnimationComplete(int screenNumber);
@@ -87,18 +93,17 @@ public class OnboardingFragment extends Fragment {
         // Get arguments
         Bundle args = getArguments();
         if (args != null) {
-            String title = args.getString(ARG_TITLE, "");
-            String description = args.getString(ARG_DESCRIPTION, "");
+            pendingTitle = args.getString(ARG_TITLE, "");
+            pendingDescription = args.getString(ARG_DESCRIPTION, "");
             int imageResource = args.getInt(ARG_IMAGE_RESOURCE, 0);
-            int screenNumber = args.getInt(ARG_SCREEN_NUMBER, 1);
+            pendingScreenNumber = args.getInt(ARG_SCREEN_NUMBER, 1);
             
-            // Set image
+            // Set image immediately
             if (imageResource != 0) {
                 ivIllustration.setImageResource(imageResource);
             }
             
-            // Start typewriter animation
-            startTypewriterAnimation(title, description, screenNumber);
+            // Don't start animation yet - wait for fragment to become visible
         }
     }
     
@@ -107,6 +112,32 @@ public class OnboardingFragment extends Fragment {
      */
     public void setOnAnimationCompleteListener(OnAnimationCompleteListener listener) {
         this.animationCompleteListener = listener;
+    }
+    
+    /**
+     * Start the animation when fragment becomes visible
+     */
+    public void startAnimationIfVisible() {
+        if (!hasAnimationStarted && !pendingTitle.isEmpty()) {
+            hasAnimationStarted = true;
+            startTypewriterAnimation(pendingTitle, pendingDescription, pendingScreenNumber);
+        }
+    }
+    
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Start animation when fragment resumes (becomes visible)
+        startAnimationIfVisible();
+    }
+    
+    @Override
+    public void setUserVisibleHint(boolean isVisibleToUser) {
+        super.setUserVisibleHint(isVisibleToUser);
+        if (isVisibleToUser && !hasAnimationStarted) {
+            // Fragment is now visible, start animation
+            startAnimationIfVisible();
+        }
     }
     
     /**
