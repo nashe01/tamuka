@@ -23,7 +23,7 @@
         android:layout_height="wrap_content"
         android:text="Are you sure you want to logout?"
         android:textColor="@android:color/black"
-        android:textSize="12sp"
+        android:textSize="14sp"
         android:gravity="center"
         android:layout_marginBottom="16dp" />
 
@@ -36,23 +36,25 @@
         <Button
             android:id="@+id/btnCancel"
             android:layout_width="wrap_content"
-            android:layout_height="32dp"
+            android:layout_height="42dp"
             android:text="No"
             android:textColor="@android:color/black"
-            android:background="@drawable/button_cancel_background"
+            android:background="@android:color/transparent"
             android:layout_marginEnd="6dp"
             android:minWidth="50dp"
-            android:textSize="12sp" />
+            android:textSize="14sp"
+            android:textStyle="bold" />
 
         <Button
             android:id="@+id/btnConfirm"
             android:layout_width="wrap_content"
-            android:layout_height="32dp"
+            android:layout_height="42dp"
             android:text="Yes"
-            android:textColor="@android:color/white"
-            android:background="@drawable/button_confirm_background"
+            android:textColor="@color/purple_500"
+            android:background="@android:color/transparent"
             android:minWidth="50dp"
-            android:textSize="12sp" />
+            android:textSize="14sp"
+            android:textStyle="bold" />
 
     </LinearLayout>
 
