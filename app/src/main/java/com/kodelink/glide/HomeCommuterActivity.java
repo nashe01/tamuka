@@ -987,7 +987,10 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                                 Toast.makeText(HomeCommuterActivity.this, "Ride accepted! Driver is on the way.", Toast.LENGTH_LONG).show();
                                 // Update active ride state
                                 hasActiveRide = true;
-                                // Here you would navigate to ride tracking screen
+                                // Navigate to ride in progress screen
+                                Intent intent = new Intent(HomeCommuterActivity.this, CommuterRideProgressActivity.class);
+                                intent.putExtra("rideId", activeRideRequest.rideId);
+                                startActivity(intent);
                                 break;
                             case "declined":
                                 Toast.makeText(HomeCommuterActivity.this, "Ride declined. Looking for another driver...", Toast.LENGTH_LONG).show();

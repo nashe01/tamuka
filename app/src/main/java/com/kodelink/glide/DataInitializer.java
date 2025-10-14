@@ -20,19 +20,15 @@ public class DataInitializer {
         DatabaseReference databaseRef = database.getReference();
         FirebaseFirestore firestore = FirebaseFirestore.getInstance();
         
-        Log.d(TAG, "Starting comprehensive sample data initialization...");
+        Log.d(TAG, "Starting database cleanup and verification...");
         
-        // Initialize comprehensive sample data with proper synchronization
-        initializeSampleUsers(firestore);
-        initializeSampleDrivers(firestore, databaseRef);
-        initializeSampleVehicles(firestore);
-        initializeSampleCommuters(firestore);
-        initializeSampleRideRequests(firestore, databaseRef);
+        // Clean up any test data first
+        new DatabaseCleanup().cleanupAllTestData();
         
         // Clean up any invalid data from previous testing
         new DatabaseSyncVerifier().fixAllSyncIssues();
         
-        Log.d(TAG, "Comprehensive sample data initialized with cleanup and sync verification");
+        Log.d(TAG, "Database cleanup and verification completed");
     }
     
     private static void initializeSampleUsers(FirebaseFirestore firestore) {
@@ -299,6 +295,8 @@ public class DataInitializer {
         }).addOnFailureListener(e -> 
             Log.e(TAG, "Failed to create sample ride requests", e));
     }
+    
+    
 }
 
 

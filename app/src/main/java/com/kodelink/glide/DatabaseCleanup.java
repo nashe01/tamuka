@@ -7,236 +7,362 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 /**
- * Utility class for cleaning up database data
- * Use this to clean up test data or invalid entries
+ * DatabaseCleanup - Utility class for cleaning up test data from the database
+ * 
+ * This class provides methods to remove test data from both Firestore and Realtime Database
+ * to ensure a clean production environment.
  */
 public class DatabaseCleanup {
     private static final String TAG = "DatabaseCleanup";
     
+    private FirebaseDatabase database;
+    private DatabaseReference databaseRef;
     private FirebaseFirestore firestore;
-    private DatabaseReference realtimeDb;
     
     public DatabaseCleanup() {
+        database = FirebaseDatabase.getInstance("https://glide-77761-default-rtdb.firebaseio.com/");
+        databaseRef = database.getReference();
         firestore = FirebaseFirestore.getInstance();
-        realtimeDb = FirebaseDatabase.getInstance("https://glide-77761-default-rtdb.firebaseio.com/").getReference();
     }
     
     /**
-     * Clean up all sample data (use with caution!)
+     * Clean up all test ride requests from both databases
      */
-    public void cleanupAllSampleData() {
-        Log.d(TAG, "🧹 Cleaning up all sample data...");
+    public void cleanupTestRideRequests() {
+        Log.d(TAG, "🧹 Starting test ride requests cleanup...");
         
-        // Clean up Firestore collections
-        cleanupFirestoreSampleData();
+        // Test ride IDs to remove
+        String[] testRideIds = {
+            "test_ride_in_progress_001",
+            "test_ride_in_progress_002", 
+            "test_ride_in_progress_003",
+            "test_ride_in_progress_004",
+            "test_ride_001",
+            "test_ride_002",
+            "test_ride_003",
+            "test_ride_004",
+            "ride_001",
+            "ride_002"
+        };
         
-        // Clean up Realtime Database
-        cleanupRealtimeSampleData();
+        int totalOperations = testRideIds.length * 2; // Realtime + Firestore
+        final int[] completedOperations = {0};
         
-        Log.d(TAG, "✅ All sample data cleanup completed");
-    }
-    
-    /**
-     * Clean up only invalid users (safe to use)
-     */
-    public void cleanupInvalidUsers() {
-        Log.d(TAG, "🧹 Cleaning up invalid users...");
-        
-        firestore.collection("users").get()
-            .addOnSuccessListener(querySnapshot -> {
-                java.util.concurrent.atomic.AtomicInteger cleanedCount = new java.util.concurrent.atomic.AtomicInteger(0);
-                java.util.concurrent.atomic.AtomicInteger totalInvalidUsers = new java.util.concurrent.atomic.AtomicInteger(0);
-                
-                // First pass: count invalid users
-                for (com.google.firebase.firestore.DocumentSnapshot doc : querySnapshot.getDocuments()) {
-                    String role = doc.getString("role");
-                    String entityId = doc.getString("entityId");
-                    
-                    if (role == null || entityId == null) {
-                        totalInvalidUsers.incrementAndGet();
+        // Remove from Realtime Database
+        for (String rideId : testRideIds) {
+            databaseRef.child("rideRequestsLive").child(rideId).removeValue()
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "✅ Removed test ride from Realtime Database: " + rideId);
+                    completedOperations[0]++;
+                    if (completedOperations[0] == totalOperations) {
+                        Log.d(TAG, "🎉 Test ride requests cleanup completed successfully!");
                     }
-                }
-                
-                final int totalCount = totalInvalidUsers.get();
-                
-                if (totalCount == 0) {
-                    Log.d(TAG, "✅ No invalid users found to clean up");
-                    return;
-                }
-                
-                // Second pass: delete invalid users
-                for (com.google.firebase.firestore.DocumentSnapshot doc : querySnapshot.getDocuments()) {
-                    String uid = doc.getId();
-                    String role = doc.getString("role");
-                    String entityId = doc.getString("entityId");
-                    
-                    // Clean up users without proper structure
-                    if (role == null || entityId == null) {
-                        Log.d(TAG, "🧹 Cleaning up invalid user: " + uid);
-                        doc.getReference().delete()
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "❌ Failed to remove test ride from Realtime Database: " + rideId, e);
+                    completedOperations[0]++;
+                    if (completedOperations[0] == totalOperations) {
+                        Log.d(TAG, "🎉 Test ride requests cleanup completed with some errors!");
+                    }
+                });
+        }
+        
+        // Remove from Firestore
+        for (String rideId : testRideIds) {
+            firestore.collection("rideRequests").document(rideId).delete()
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "✅ Removed test ride from Firestore: " + rideId);
+                    completedOperations[0]++;
+                    if (completedOperations[0] == totalOperations) {
+                        Log.d(TAG, "🎉 Test ride requests cleanup completed successfully!");
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "❌ Failed to remove test ride from Firestore: " + rideId, e);
+                    completedOperations[0]++;
+                    if (completedOperations[0] == totalOperations) {
+                        Log.d(TAG, "🎉 Test ride requests cleanup completed with some errors!");
+                    }
+                });
+        }
+    }
+    
+    /**
+     * Clean up all test data (rides, users, drivers, etc.)
+     */
+    public void cleanupAllTestData() {
+        Log.d(TAG, "🧹 Starting comprehensive test data cleanup...");
+        
+        // Clean up test ride requests
+        cleanupTestRideRequests();
+        
+        // Clean up test users
+        cleanupTestUsers();
+        
+        // Clean up test drivers
+        cleanupTestDrivers();
+        
+        // Clean up test commuters
+        cleanupTestCommuters();
+        
+        Log.d(TAG, "🧹 Comprehensive test data cleanup completed");
+    }
+    
+    /**
+     * Clean up test users
+     */
+    private void cleanupTestUsers() {
+        Log.d(TAG, "🧹 Cleaning up test users...");
+        
+        String[] testUserIds = {
+            "sample_driver_001",
+            "sample_driver_002", 
+            "sample_driver_003",
+            "sample_commuter_001",
+            "sample_commuter_002"
+        };
+        
+        for (String userId : testUserIds) {
+            firestore.collection("users").document(userId).delete()
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "✅ Removed test user: " + userId);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "❌ Failed to remove test user: " + userId, e);
+                });
+        }
+    }
+    
+    /**
+     * Clean up test drivers
+     */
+    private void cleanupTestDrivers() {
+        Log.d(TAG, "🧹 Cleaning up test drivers...");
+        
+        String[] testDriverIds = {
+            "driver_001",
+            "driver_002", 
+            "driver_003"
+        };
+        
+        for (String driverId : testDriverIds) {
+            // Remove from Firestore
+            firestore.collection("drivers").document(driverId).delete()
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "✅ Removed test driver from Firestore: " + driverId);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "❌ Failed to remove test driver from Firestore: " + driverId, e);
+                });
+            
+            // Remove from Realtime Database
+            databaseRef.child("drivers_live").child(driverId).removeValue()
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "✅ Removed test driver from Realtime Database: " + driverId);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "❌ Failed to remove test driver from Realtime Database: " + driverId, e);
+                });
+        }
+    }
+    
+    /**
+     * Clean up test commuters
+     */
+    private void cleanupTestCommuters() {
+        Log.d(TAG, "🧹 Cleaning up test commuters...");
+        
+        String[] testCommuterIds = {
+            "commuter_001",
+            "commuter_002"
+        };
+        
+        for (String commuterId : testCommuterIds) {
+            firestore.collection("commuters").document(commuterId).delete()
                             .addOnSuccessListener(aVoid -> {
-                                int count = cleanedCount.incrementAndGet();
-                                Log.d(TAG, "✅ Cleaned up invalid user: " + uid + " (" + count + "/" + totalCount + ")");
-                                
-                                // Log final count when all deletions are complete
-                                if (count == totalCount) {
-                                    Log.d(TAG, "✅ Cleanup completed: " + count + " invalid users removed");
-                                }
-                            })
-                            .addOnFailureListener(e -> Log.e(TAG, "Failed to clean up user: " + uid, e));
-                    }
-                }
-            })
-            .addOnFailureListener(e -> Log.e(TAG, "Failed to clean up invalid users", e));
+                    Log.d(TAG, "✅ Removed test commuter: " + commuterId);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "❌ Failed to remove test commuter: " + commuterId, e);
+                });
+        }
     }
     
     /**
-     * Clean up completed rides from Realtime Database
+     * Clean up completed/declined rides from Realtime Database
+     * (These should only be in Firestore, not in live data)
      */
     public void cleanupCompletedRides() {
-        Log.d(TAG, "🧹 Cleaning up completed rides from Realtime Database...");
+        Log.d(TAG, "🧹 Cleaning up completed/declined rides from Realtime Database...");
         
-        realtimeDb.child("rideRequestsLive").addListenerForSingleValueEvent(new com.google.firebase.database.ValueEventListener() {
-            @Override
-            public void onDataChange(com.google.firebase.database.DataSnapshot dataSnapshot) {
+        databaseRef.child("rideRequestsLive").get()
+            .addOnSuccessListener(dataSnapshot -> {
                 int cleanedCount = 0;
                 for (com.google.firebase.database.DataSnapshot snapshot : dataSnapshot.getChildren()) {
                     String status = snapshot.child("status").getValue(String.class);
                     if ("completed".equals(status) || "declined".equals(status)) {
-                        Log.d(TAG, "🧹 Cleaning up " + status + " ride: " + snapshot.getKey());
                         snapshot.getRef().removeValue();
                         cleanedCount++;
                     }
                 }
                 Log.d(TAG, "✅ Cleaned up " + cleanedCount + " completed/declined rides from Realtime Database");
-            }
-            
-            @Override
-            public void onCancelled(com.google.firebase.database.DatabaseError databaseError) {
-                Log.e(TAG, "Failed to cleanup completed rides", databaseError.toException());
-            }
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "❌ Failed to cleanup completed rides", e);
         });
     }
     
     /**
-     * Clean up Firestore sample data
+     * Clean up pending rides from both databases
+     * This removes all pending ride requests
      */
-    private void cleanupFirestoreSampleData() {
-        // Clean up sample users
-        firestore.collection("users").whereEqualTo("email", "john.doe@glide.com").get()
-            .addOnSuccessListener(querySnapshot -> {
-                for (com.google.firebase.firestore.DocumentSnapshot doc : querySnapshot.getDocuments()) {
-                    doc.getReference().delete();
+    public void cleanupPendingRides() {
+        Log.d(TAG, "🧹 Cleaning up pending rides from both databases...");
+        
+        // Clean up from Realtime Database
+        databaseRef.child("rideRequestsLive").get()
+            .addOnSuccessListener(dataSnapshot -> {
+                int cleanedCount = 0;
+                int totalPendingRides = 0;
+                
+                // Count total pending rides first
+                for (com.google.firebase.database.DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    String status = snapshot.child("status").getValue(String.class);
+                    if ("pending".equals(status)) {
+                        totalPendingRides++;
+                    }
                 }
-            });
-        
-        firestore.collection("users").whereEqualTo("email", "jane.smith@glide.com").get()
-            .addOnSuccessListener(querySnapshot -> {
-                for (com.google.firebase.firestore.DocumentSnapshot doc : querySnapshot.getDocuments()) {
-                    doc.getReference().delete();
+                
+                if (totalPendingRides == 0) {
+                    Log.d(TAG, "🎉 No pending rides found - cleanup completed!");
+                    return;
                 }
-            });
-        
-        firestore.collection("users").whereEqualTo("email", "mike.johnson@glide.com").get()
-            .addOnSuccessListener(querySnapshot -> {
-                for (com.google.firebase.firestore.DocumentSnapshot doc : querySnapshot.getDocuments()) {
-                    doc.getReference().delete();
+                
+                final int[] completedFirestoreOperations = {0};
+                
+                for (com.google.firebase.database.DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    String status = snapshot.child("status").getValue(String.class);
+                    if ("pending".equals(status)) {
+                        String rideId = snapshot.getKey();
+                        snapshot.getRef().removeValue();
+                        cleanedCount++;
+                        
+                        // Also remove from Firestore
+                        firestore.collection("rideRequests").document(rideId).delete()
+                            .addOnSuccessListener(aVoid -> {
+                                Log.d(TAG, "✅ Removed pending ride from Firestore: " + rideId);
+                                completedFirestoreOperations[0]++;
+                                if (completedFirestoreOperations[0] == totalPendingRides) {
+                                    Log.d(TAG, "🎉 Pending rides cleanup completed successfully! Removed " + cleanedCount + " rides from both databases.");
+                                }
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e(TAG, "❌ Failed to remove pending ride from Firestore: " + rideId, e);
+                                completedFirestoreOperations[0]++;
+                                if (completedFirestoreOperations[0] == totalPendingRides) {
+                                    Log.d(TAG, "🎉 Pending rides cleanup completed with some errors! Removed " + cleanedCount + " rides from Realtime Database.");
+                                }
+                            });
+                    }
                 }
+                Log.d(TAG, "✅ Cleaned up " + cleanedCount + " pending rides from Realtime Database");
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "❌ Failed to cleanup pending rides", e);
             });
-        
-        firestore.collection("users").whereEqualTo("email", "blessing.moyo@glide.com").get()
-            .addOnSuccessListener(querySnapshot -> {
-                for (com.google.firebase.firestore.DocumentSnapshot doc : querySnapshot.getDocuments()) {
-                    doc.getReference().delete();
-                }
-            });
-        
-        firestore.collection("users").whereEqualTo("email", "sarah.chikwava@glide.com").get()
-            .addOnSuccessListener(querySnapshot -> {
-                for (com.google.firebase.firestore.DocumentSnapshot doc : querySnapshot.getDocuments()) {
-                    doc.getReference().delete();
-                }
-            });
-        
-        // Clean up sample drivers
-        firestore.collection("drivers").document("driver_001").delete();
-        firestore.collection("drivers").document("driver_002").delete();
-        firestore.collection("drivers").document("driver_003").delete();
-        
-        // Clean up sample vehicles
-        firestore.collection("vehicles").document("vehicle_001").delete();
-        firestore.collection("vehicles").document("vehicle_002").delete();
-        firestore.collection("vehicles").document("vehicle_003").delete();
-        
-        // Clean up sample commuters
-        firestore.collection("commuters").document("commuter_001").delete();
-        firestore.collection("commuters").document("commuter_002").delete();
-        
-        // Clean up sample ride requests
-        firestore.collection("rideRequests").document("ride_001").delete();
-        firestore.collection("rideRequests").document("ride_002").delete();
     }
     
     /**
-     * Clean up Realtime Database sample data
+     * Clean up active rides (accepted and in_progress) from both databases
+     * This removes all active ride requests
      */
-    private void cleanupRealtimeSampleData() {
-        // Clean up live drivers
-        realtimeDb.child("drivers_live").child("driver_001").removeValue();
-        realtimeDb.child("drivers_live").child("driver_002").removeValue();
-        realtimeDb.child("drivers_live").child("driver_003").removeValue();
+    public void cleanupActiveRides() {
+        Log.d(TAG, "🧹 Cleaning up active rides from both databases...");
         
-        // Clean up live ride requests
-        realtimeDb.child("rideRequestsLive").child("ride_001").removeValue();
-        realtimeDb.child("rideRequestsLive").child("ride_002").removeValue();
+        // Clean up from Realtime Database
+        databaseRef.child("rideRequestsLive").get()
+            .addOnSuccessListener(dataSnapshot -> {
+                int cleanedCount = 0;
+                int totalActiveRides = 0;
+                
+                // Count total active rides first
+                for (com.google.firebase.database.DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    String status = snapshot.child("status").getValue(String.class);
+                    if ("accepted".equals(status) || "in_progress".equals(status)) {
+                        totalActiveRides++;
+                    }
+                }
+                
+                if (totalActiveRides == 0) {
+                    Log.d(TAG, "🎉 No active rides found - cleanup completed!");
+                    return;
+                }
+                
+                final int[] completedFirestoreOperations = {0};
+                
+                for (com.google.firebase.database.DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    String status = snapshot.child("status").getValue(String.class);
+                    if ("accepted".equals(status) || "in_progress".equals(status)) {
+                        String rideId = snapshot.getKey();
+                        snapshot.getRef().removeValue();
+                        cleanedCount++;
+                        
+                        // Also remove from Firestore
+                        firestore.collection("rideRequests").document(rideId).delete()
+                            .addOnSuccessListener(aVoid -> {
+                                Log.d(TAG, "✅ Removed active ride from Firestore: " + rideId);
+                                completedFirestoreOperations[0]++;
+                                if (completedFirestoreOperations[0] == totalActiveRides) {
+                                    Log.d(TAG, "🎉 Active rides cleanup completed successfully! Removed " + cleanedCount + " rides from both databases.");
+                                }
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e(TAG, "❌ Failed to remove active ride from Firestore: " + rideId, e);
+                                completedFirestoreOperations[0]++;
+                                if (completedFirestoreOperations[0] == totalActiveRides) {
+                                    Log.d(TAG, "🎉 Active rides cleanup completed with some errors! Removed " + cleanedCount + " rides from Realtime Database.");
+                                }
+                            });
+                    }
+                }
+                Log.d(TAG, "✅ Cleaned up " + cleanedCount + " active rides from Realtime Database");
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "❌ Failed to cleanup active rides", e);
+            });
     }
     
     /**
-     * Get database statistics after cleanup
+     * Get database statistics
      */
     public void getDatabaseStats() {
         Log.d(TAG, "📊 Getting database statistics...");
         
-        // Count Firestore collections
-        firestore.collection("users").get()
-            .addOnSuccessListener(querySnapshot -> 
-                Log.d(TAG, "Users in Firestore: " + querySnapshot.size()));
+        // Count Firestore documents
+        firestore.collection("rideRequests").get()
+            .addOnSuccessListener(querySnapshot -> {
+                Log.d(TAG, "📊 Firestore ride requests: " + querySnapshot.size());
+            });
         
         firestore.collection("drivers").get()
-            .addOnSuccessListener(querySnapshot -> 
-                Log.d(TAG, "Drivers in Firestore: " + querySnapshot.size()));
+            .addOnSuccessListener(querySnapshot -> {
+                Log.d(TAG, "📊 Firestore drivers: " + querySnapshot.size());
+            });
         
         firestore.collection("commuters").get()
-            .addOnSuccessListener(querySnapshot -> 
-                Log.d(TAG, "Commuters in Firestore: " + querySnapshot.size()));
+            .addOnSuccessListener(querySnapshot -> {
+                Log.d(TAG, "📊 Firestore commuters: " + querySnapshot.size());
+            });
         
-        firestore.collection("rideRequests").get()
-            .addOnSuccessListener(querySnapshot -> 
-                Log.d(TAG, "Ride requests in Firestore: " + querySnapshot.size()));
+        // Count Realtime Database nodes
+        databaseRef.child("rideRequestsLive").get()
+            .addOnSuccessListener(dataSnapshot -> {
+                Log.d(TAG, "📊 Realtime Database ride requests: " + dataSnapshot.getChildrenCount());
+            });
         
-        // Count Realtime Database
-        realtimeDb.child("drivers_live").addListenerForSingleValueEvent(new com.google.firebase.database.ValueEventListener() {
-            @Override
-            public void onDataChange(com.google.firebase.database.DataSnapshot dataSnapshot) {
-                Log.d(TAG, "Live drivers in Realtime Database: " + dataSnapshot.getChildrenCount());
-            }
-            
-            @Override
-            public void onCancelled(com.google.firebase.database.DatabaseError databaseError) {
-                Log.e(TAG, "Failed to count live drivers", databaseError.toException());
-            }
-        });
-        
-        realtimeDb.child("rideRequestsLive").addListenerForSingleValueEvent(new com.google.firebase.database.ValueEventListener() {
-            @Override
-            public void onDataChange(com.google.firebase.database.DataSnapshot dataSnapshot) {
-                Log.d(TAG, "Live ride requests in Realtime Database: " + dataSnapshot.getChildrenCount());
-            }
-            
-            @Override
-            public void onCancelled(com.google.firebase.database.DatabaseError databaseError) {
-                Log.e(TAG, "Failed to count live ride requests", databaseError.toException());
-            }
+        databaseRef.child("drivers_live").get()
+            .addOnSuccessListener(dataSnapshot -> {
+                Log.d(TAG, "📊 Realtime Database drivers: " + dataSnapshot.getChildrenCount());
         });
     }
 }
