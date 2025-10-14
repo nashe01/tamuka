@@ -422,29 +422,24 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
     }
 
     private void showLogoutConfirmationDialog() {
-        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Logout")
-                .setMessage("Are you sure you want to logout?")
-                .setPositiveButton("Yes", (dialogInterface, which) -> {
-                    logout();
-                })
-                .setNegativeButton("No", (dialogInterface, which) -> {
-                    dialogInterface.dismiss();
-                })
-                .create();
+        androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(this);
+        android.view.LayoutInflater inflater = getLayoutInflater();
+        android.view.View dialogView = inflater.inflate(R.layout.custom_logout_dialog, null);
+        
+        builder.setView(dialogView);
+        androidx.appcompat.app.AlertDialog dialog = builder.create();
+        
+        // Set up button listeners
+        android.widget.Button btnCancel = dialogView.findViewById(R.id.btnCancel);
+        android.widget.Button btnConfirm = dialogView.findViewById(R.id.btnConfirm);
+        
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+        btnConfirm.setOnClickListener(v -> {
+            dialog.dismiss();
+            logout();
+        });
         
         dialog.show();
-        
-        // Apply primary color to title
-        dialog.getWindow().getDecorView().post(() -> {
-            int titleId = getResources().getIdentifier("alertTitle", "id", "android");
-            if (titleId != 0) {
-                android.widget.TextView titleView = dialog.findViewById(titleId);
-                if (titleView != null) {
-                    titleView.setTextColor(getResources().getColor(R.color.purple_500));
-                }
-            }
-        });
     }
 
     private void logout() {
