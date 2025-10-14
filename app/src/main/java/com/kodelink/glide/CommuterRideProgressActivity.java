@@ -28,8 +28,20 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.ValueEventListener;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 /**
  * CommuterRideProgressActivity - Handles the ride in progress screen for commuters
@@ -355,10 +367,8 @@ public class CommuterRideProgressActivity extends AppCompatActivity implements O
             LatLng pickup = new LatLng(currentRide.pickupLocation.lat, currentRide.pickupLocation.lng);
             LatLng destination = new LatLng(currentRide.destination.lat, currentRide.destination.lng);
             
-            routePolyline = googleMap.addPolyline(new PolylineOptions()
-                .add(pickup, destination)
-                .width(5)
-                .color(getResources().getColor(R.color.purple_500)));
+            // Get route from Google Directions API
+            drawRoute(pickup, destination);
         }
         
         // Move camera to show both locations
@@ -435,5 +445,195 @@ public class CommuterRideProgressActivity extends AppCompatActivity implements O
     public void onLowMemory() {
         super.onLowMemory();
         mapView.onLowMemory();
+    }
+    
+    /**
+     * Draw route from origin to destination using Google Maps Directions API
+     */
+    private void drawRoute(LatLng origin, LatLng destination) {
+        // Remove existing route polyline
+        if (routePolyline != null) {
+            routePolyline.remove();
+        }
+        
+        // Get route from Google Maps Directions API
+        getRouteFromDirectionsAPI(origin, destination);
+    }
+    
+    /**
+     * Get route data from Google Maps Directions API
+     */
+    private void getRouteFromDirectionsAPI(LatLng origin, LatLng destination) {
+        String apiKey = "AIzaSyDc8_axTnQWPUiBWVgp1ifK0zV8Zy21Tqw";
+        String originStr = origin.latitude + "," + origin.longitude;
+        String destinationStr = destination.latitude + "," + destination.longitude;
+        
+        String url = "https://maps.googleapis.com/maps/api/directions/json?" +
+                "origin=" + originStr +
+                "&destination=" + destinationStr +
+                "&key=" + apiKey;
+        
+        Log.d("CommuterRideProgressDirectionsAPI", "Requesting route: " + url);
+        
+        // Execute API call in background thread
+        new Thread(() -> {
+            try {
+                String response = makeHttpRequest(url);
+                runOnUiThread(() -> parseDirectionsResponse(response, origin, destination));
+            } catch (Exception e) {
+                Log.e("CommuterRideProgressDirectionsAPI", "Error getting directions: " + e.getMessage());
+                runOnUiThread(() -> {
+                    // Fallback to straight line if API fails
+                    drawStraightLineRoute(origin, destination);
+                    Toast.makeText(this, "Could not get route details. Showing direct path.", Toast.LENGTH_SHORT).show();
+                });
+            }
+        }).start();
+    }
+    
+    /**
+     * Make HTTP request to Google Directions API
+     */
+    private String makeHttpRequest(String urlString) throws IOException {
+        URL url = new URL(urlString);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+        connection.setConnectTimeout(10000);
+        connection.setReadTimeout(10000);
+        
+        InputStream inputStream = connection.getInputStream();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+        StringBuilder response = new StringBuilder();
+        String line;
+        
+        while ((line = reader.readLine()) != null) {
+            response.append(line);
+        }
+        
+        reader.close();
+        inputStream.close();
+        connection.disconnect();
+        
+        return response.toString();
+    }
+    
+    /**
+     * Parse the Directions API response and draw the route
+     */
+    private void parseDirectionsResponse(String response, LatLng origin, LatLng destination) {
+        try {
+            JSONObject jsonResponse = new JSONObject(response);
+            String status = jsonResponse.getString("status");
+            
+            if (!status.equals("OK")) {
+                Log.e("CommuterRideProgressDirectionsAPI", "Directions API error: " + status);
+                drawStraightLineRoute(origin, destination);
+                return;
+            }
+            
+            JSONArray routes = jsonResponse.getJSONArray("routes");
+            if (routes.length() == 0) {
+                Log.e("CommuterRideProgressDirectionsAPI", "No routes found");
+                drawStraightLineRoute(origin, destination);
+                return;
+            }
+            
+            JSONObject route = routes.getJSONObject(0);
+            JSONArray legs = route.getJSONArray("legs");
+            JSONObject leg = legs.getJSONObject(0);
+            
+            // Extract distance and duration
+            JSONObject distance = leg.getJSONObject("distance");
+            JSONObject duration = leg.getJSONObject("duration");
+            
+            String distanceText = distance.getString("text");
+            String durationText = duration.getString("text");
+            
+            // Extract route points
+            JSONObject overviewPolyline = route.getJSONObject("overview_polyline");
+            String encodedPolyline = overviewPolyline.getString("points");
+            
+            // Decode polyline and draw route
+            List<LatLng> routePoints = decodePolyline(encodedPolyline);
+            drawRoutePolyline(routePoints);
+            
+            // Update route information in UI
+            updateRouteInfo(distanceText, durationText);
+            
+            Log.d("CommuterRideProgressDirectionsAPI", "Route found: " + distanceText + ", " + durationText);
+            
+        } catch (JSONException e) {
+            Log.e("CommuterRideProgressDirectionsAPI", "Error parsing directions response: " + e.getMessage());
+            drawStraightLineRoute(origin, destination);
+        }
+    }
+    
+    /**
+     * Draw straight line route as fallback
+     */
+    private void drawStraightLineRoute(LatLng origin, LatLng destination) {
+        routePolyline = googleMap.addPolyline(new PolylineOptions()
+                .add(origin, destination)
+                .width(5)
+                .color(getResources().getColor(R.color.purple_500)));
+    }
+    
+    /**
+     * Draw route polyline from decoded points
+     */
+    private void drawRoutePolyline(List<LatLng> points) {
+        if (points == null || points.isEmpty()) return;
+        
+        routePolyline = googleMap.addPolyline(new PolylineOptions()
+                .addAll(points)
+                .width(5)
+                .color(getResources().getColor(R.color.purple_500)));
+    }
+    
+    /**
+     * Decode polyline string to list of LatLng points
+     */
+    private List<LatLng> decodePolyline(String encoded) {
+        List<LatLng> poly = new ArrayList<>();
+        int index = 0, len = encoded.length();
+        int lat = 0, lng = 0;
+        
+        while (index < len) {
+            int b, shift = 0, result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lat += dlat;
+            
+            shift = 0;
+            result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lng += dlng;
+            
+            LatLng p = new LatLng((((double) lat / 1E5)), (((double) lng / 1E5)));
+            poly.add(p);
+        }
+        
+        return poly;
+    }
+    
+    /**
+     * Update route information in the UI
+     */
+    private void updateRouteInfo(String distance, String duration) {
+        if (tvDistance != null) {
+            tvDistance.setText(distance);
+        }
+        if (tvDuration != null) {
+            tvDuration.setText(duration);
+        }
     }
 }
