@@ -76,6 +76,10 @@ public class OnboardingActivity extends AppCompatActivity implements View.OnClic
      */
     private void setupViewPager() {
         adapter = new OnboardingPagerAdapter(this);
+        
+        // Set up animation listener in the adapter
+        adapter.setAnimationCompleteListener(this);
+        
         viewPager.setAdapter(adapter);
         
         // Disable user swiping to control navigation programmatically
@@ -145,11 +149,8 @@ public class OnboardingActivity extends AppCompatActivity implements View.OnClic
      * Start animation for the first page
      */
     private void startFirstPageAnimation() {
-        // Get the first fragment and set up animation listener
-        OnboardingFragment firstFragment = (OnboardingFragment) adapter.createFragment(0);
-        if (firstFragment != null) {
-            firstFragment.setOnAnimationCompleteListener(this);
-        }
+        // Animation listeners are now set up automatically by the adapter
+        // No additional setup needed
     }
     
     @Override
