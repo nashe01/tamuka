@@ -423,6 +423,11 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         });
         
         dialog.show();
+        
+        // Ensure rounded corners are properly applied
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
     }
 
     private void logout() {
