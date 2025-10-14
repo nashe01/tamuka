@@ -222,18 +222,18 @@ public class DatabaseCleanup {
         // Clean up from Realtime Database
         databaseRef.child("rideRequestsLive").get()
             .addOnSuccessListener(dataSnapshot -> {
-                int cleanedCount = 0;
-                int totalPendingRides = 0;
+                final int[] cleanedCount = {0};
+                final int[] totalPendingRides = {0};
                 
                 // Count total pending rides first
                 for (com.google.firebase.database.DataSnapshot snapshot : dataSnapshot.getChildren()) {
                     String status = snapshot.child("status").getValue(String.class);
                     if ("pending".equals(status)) {
-                        totalPendingRides++;
+                        totalPendingRides[0]++;
                     }
                 }
                 
-                if (totalPendingRides == 0) {
+                if (totalPendingRides[0] == 0) {
                     Log.d(TAG, "🎉 No pending rides found - cleanup completed!");
                     return;
                 }
@@ -245,27 +245,27 @@ public class DatabaseCleanup {
                     if ("pending".equals(status)) {
                         String rideId = snapshot.getKey();
                         snapshot.getRef().removeValue();
-                        cleanedCount++;
+                        cleanedCount[0]++;
                         
                         // Also remove from Firestore
                         firestore.collection("rideRequests").document(rideId).delete()
                             .addOnSuccessListener(aVoid -> {
                                 Log.d(TAG, "✅ Removed pending ride from Firestore: " + rideId);
                                 completedFirestoreOperations[0]++;
-                                if (completedFirestoreOperations[0] == totalPendingRides) {
-                                    Log.d(TAG, "🎉 Pending rides cleanup completed successfully! Removed " + cleanedCount + " rides from both databases.");
+                                if (completedFirestoreOperations[0] == totalPendingRides[0]) {
+                                    Log.d(TAG, "🎉 Pending rides cleanup completed successfully! Removed " + cleanedCount[0] + " rides from both databases.");
                                 }
                             })
                             .addOnFailureListener(e -> {
                                 Log.e(TAG, "❌ Failed to remove pending ride from Firestore: " + rideId, e);
                                 completedFirestoreOperations[0]++;
-                                if (completedFirestoreOperations[0] == totalPendingRides) {
-                                    Log.d(TAG, "🎉 Pending rides cleanup completed with some errors! Removed " + cleanedCount + " rides from Realtime Database.");
+                                if (completedFirestoreOperations[0] == totalPendingRides[0]) {
+                                    Log.d(TAG, "🎉 Pending rides cleanup completed with some errors! Removed " + cleanedCount[0] + " rides from Realtime Database.");
                                 }
                             });
                     }
                 }
-                Log.d(TAG, "✅ Cleaned up " + cleanedCount + " pending rides from Realtime Database");
+                Log.d(TAG, "✅ Cleaned up " + cleanedCount[0] + " pending rides from Realtime Database");
             })
             .addOnFailureListener(e -> {
                 Log.e(TAG, "❌ Failed to cleanup pending rides", e);
@@ -282,18 +282,18 @@ public class DatabaseCleanup {
         // Clean up from Realtime Database
         databaseRef.child("rideRequestsLive").get()
             .addOnSuccessListener(dataSnapshot -> {
-                int cleanedCount = 0;
-                int totalActiveRides = 0;
+                final int[] cleanedCount = {0};
+                final int[] totalActiveRides = {0};
                 
                 // Count total active rides first
                 for (com.google.firebase.database.DataSnapshot snapshot : dataSnapshot.getChildren()) {
                     String status = snapshot.child("status").getValue(String.class);
                     if ("accepted".equals(status) || "in_progress".equals(status)) {
-                        totalActiveRides++;
+                        totalActiveRides[0]++;
                     }
                 }
                 
-                if (totalActiveRides == 0) {
+                if (totalActiveRides[0] == 0) {
                     Log.d(TAG, "🎉 No active rides found - cleanup completed!");
                     return;
                 }
@@ -305,27 +305,27 @@ public class DatabaseCleanup {
                     if ("accepted".equals(status) || "in_progress".equals(status)) {
                         String rideId = snapshot.getKey();
                         snapshot.getRef().removeValue();
-                        cleanedCount++;
+                        cleanedCount[0]++;
                         
                         // Also remove from Firestore
                         firestore.collection("rideRequests").document(rideId).delete()
                             .addOnSuccessListener(aVoid -> {
                                 Log.d(TAG, "✅ Removed active ride from Firestore: " + rideId);
                                 completedFirestoreOperations[0]++;
-                                if (completedFirestoreOperations[0] == totalActiveRides) {
-                                    Log.d(TAG, "🎉 Active rides cleanup completed successfully! Removed " + cleanedCount + " rides from both databases.");
+                                if (completedFirestoreOperations[0] == totalActiveRides[0]) {
+                                    Log.d(TAG, "🎉 Active rides cleanup completed successfully! Removed " + cleanedCount[0] + " rides from both databases.");
                                 }
                             })
                             .addOnFailureListener(e -> {
                                 Log.e(TAG, "❌ Failed to remove active ride from Firestore: " + rideId, e);
                                 completedFirestoreOperations[0]++;
-                                if (completedFirestoreOperations[0] == totalActiveRides) {
-                                    Log.d(TAG, "🎉 Active rides cleanup completed with some errors! Removed " + cleanedCount + " rides from Realtime Database.");
+                                if (completedFirestoreOperations[0] == totalActiveRides[0]) {
+                                    Log.d(TAG, "🎉 Active rides cleanup completed with some errors! Removed " + cleanedCount[0] + " rides from Realtime Database.");
                                 }
                             });
                     }
                 }
-                Log.d(TAG, "✅ Cleaned up " + cleanedCount + " active rides from Realtime Database");
+                Log.d(TAG, "✅ Cleaned up " + cleanedCount[0] + " active rides from Realtime Database");
             })
             .addOnFailureListener(e -> {
                 Log.e(TAG, "❌ Failed to cleanup active rides", e);

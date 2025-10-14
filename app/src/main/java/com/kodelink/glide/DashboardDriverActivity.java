@@ -104,8 +104,6 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
     private TextView tvPriceEach;
     private TextView tvDistanceToCommuter;
     private TextView tvDistanceToDestination;
-    private TextView tvPickupLocation;
-    private TextView tvDestinationLocation;
     private Button btnDeclineRide;
     private Button btnAcceptRide;
     private Animation slideUpAnimation;
@@ -874,8 +872,6 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
         tvPriceEach = rideRequestCard.findViewById(R.id.tvPriceEach);
         tvDistanceToCommuter = rideRequestCard.findViewById(R.id.tvDistanceToCommuter);
         tvDistanceToDestination = rideRequestCard.findViewById(R.id.tvDistanceToDestination);
-        tvPickupLocation = rideRequestCard.findViewById(R.id.tvPickupLocation);
-        tvDestinationLocation = rideRequestCard.findViewById(R.id.tvDestinationLocation);
         btnDeclineRide = rideRequestCard.findViewById(R.id.btnDeclineRide);
         btnAcceptRide = rideRequestCard.findViewById(R.id.btnAcceptRide);
         
@@ -924,8 +920,6 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
         
         // Populate card with ride request information
         tvRequestTime.setText("Just now");
-        tvPickupLocation.setText(rideRequest.pickupLocation.address);
-        tvDestinationLocation.setText(rideRequest.destination.address);
         
         // Set people count and price
         tvPeopleCount.setText(String.valueOf(rideRequest.people));
