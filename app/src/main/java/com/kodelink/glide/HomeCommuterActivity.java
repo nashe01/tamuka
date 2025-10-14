@@ -228,7 +228,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
 
         // Set up button listeners
         btnLogout.setOnClickListener(v -> {
-            logout();
+            showLogoutConfirmationDialog();
         });
 
         // Set up search functionality
@@ -403,6 +403,19 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     }
 
 
+
+    private void showLogoutConfirmationDialog() {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Logout")
+                .setMessage("Are you sure you want to logout?")
+                .setPositiveButton("Yes", (dialog, which) -> {
+                    logout();
+                })
+                .setNegativeButton("No", (dialog, which) -> {
+                    dialog.dismiss();
+                })
+                .show();
+    }
 
     private void logout() {
         // Clear SharedPreferences

@@ -357,7 +357,7 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
         } else if (id == R.id.nav_settings) {
             Toast.makeText(this, "Settings clicked", Toast.LENGTH_SHORT).show();
         } else if (id == R.id.nav_logout) {
-            logout();
+            showLogoutConfirmationDialog();
         }
         
         drawerLayout.closeDrawer(GravityCompat.START);
@@ -419,6 +419,19 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
                     tvUserName.setText("User");
                 });
         }
+    }
+
+    private void showLogoutConfirmationDialog() {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Logout")
+                .setMessage("Are you sure you want to logout?")
+                .setPositiveButton("Yes", (dialog, which) -> {
+                    logout();
+                })
+                .setNegativeButton("No", (dialog, which) -> {
+                    dialog.dismiss();
+                })
+                .show();
     }
 
     private void logout() {
