@@ -12,6 +12,8 @@ import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -62,6 +64,13 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
     private MapView mapView;
     private GoogleMap googleMap;
     private FusedLocationProviderClient fusedLocationClient;
+    
+    // Map loading state
+    private LinearLayout mapLoadingOverlay;
+    private ProgressBar mapLoadingProgress;
+    private TextView mapLoadingText;
+    private boolean isMapLoaded = false;
+    
     private ImageButton btnMenu;
     private SwitchMaterial switchAvailability;
     private TextView tvAvailabilityStatus;
@@ -109,6 +118,11 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
         tvAvailabilityStatus = findViewById(R.id.tvAvailabilityStatus);
         drawerLayout = findViewById(R.id.drawerLayout);
         navigationView = findViewById(R.id.navigationView);
+        
+        // Initialize map loading overlay
+        mapLoadingOverlay = findViewById(R.id.mapLoadingOverlay);
+        mapLoadingProgress = findViewById(R.id.mapLoadingProgress);
+        mapLoadingText = findViewById(R.id.mapLoadingText);
         
         // Initialize ride request card
         initializeRideRequestCard();
@@ -216,6 +230,23 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
                 return true;
             }
             return false;
+        });
+        
+        // Set up map camera change listener to detect when tiles are loaded
+        googleMap.setOnCameraMoveListener(() -> {
+            if (!isMapLoaded) {
+                // Map is starting to load, update loading text
+                mapLoadingText.setText("Loading map tiles...");
+            }
+        });
+        
+        // Set up map camera idle listener to detect when map is fully loaded
+        googleMap.setOnCameraIdleListener(() -> {
+            if (!isMapLoaded) {
+                // Map tiles are loaded, hide loading overlay
+                hideMapLoadingOverlay();
+                isMapLoaded = true;
+            }
         });
         
         // Load and display pending ride request markers
@@ -445,6 +476,15 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
         }
         
         dialog.show();
+    }
+
+    private void hideMapLoadingOverlay() {
+        if (mapLoadingOverlay != null) {
+            mapLoadingOverlay.animate()
+                    .alpha(0f)
+                    .setDuration(300)
+                    .withEndAction(() -> mapLoadingOverlay.setVisibility(View.GONE));
+        }
     }
 
     private void logout() {

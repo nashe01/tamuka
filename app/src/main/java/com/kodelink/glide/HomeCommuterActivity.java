@@ -17,6 +17,8 @@ import android.view.animation.AnimationUtils;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.RatingBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -109,6 +111,12 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private MapView mapView;                    // Map view container
     private GoogleMap googleMap;                // Google Maps instance
     private FusedLocationProviderClient fusedLocationClient;  // Location services client
+    
+    // Map loading state
+    private LinearLayout mapLoadingOverlay;     // Loading overlay
+    private ProgressBar mapLoadingProgress;    // Loading progress bar
+    private TextView mapLoadingText;           // Loading text
+    private boolean isMapLoaded = false;       // Map loading state
     // UI components for navigation and search
     private ImageButton btnLogout;              // Logout button
     private TextInputEditText etSearch;         // Search input field for destinations
@@ -190,6 +198,11 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         etSearch = findViewById(R.id.etSearch);
         searchLayout = findViewById(R.id.searchLayout);
         rvSuggestions = findViewById(R.id.rvSuggestions);
+        
+        // Initialize map loading overlay
+        mapLoadingOverlay = findViewById(R.id.mapLoadingOverlay);
+        mapLoadingProgress = findViewById(R.id.mapLoadingProgress);
+        mapLoadingText = findViewById(R.id.mapLoadingText);
         
         // Initialize driver selection card
         initializeDriverSelectionCard();
@@ -274,6 +287,23 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         googleMap.setOnMapClickListener(latLng -> {
             hideSuggestions();
             hideDriverSelectionCard();
+        });
+        
+        // Set up map camera change listener to detect when tiles are loaded
+        googleMap.setOnCameraMoveListener(() -> {
+            if (!isMapLoaded) {
+                // Map is starting to load, update loading text
+                mapLoadingText.setText("Loading map tiles...");
+            }
+        });
+        
+        // Set up map camera idle listener to detect when map is fully loaded
+        googleMap.setOnCameraIdleListener(() -> {
+            if (!isMapLoaded) {
+                // Map tiles are loaded, hide loading overlay
+                hideMapLoadingOverlay();
+                isMapLoaded = true;
+            }
         });
     }
 
@@ -428,6 +458,15 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         }
         
         dialog.show();
+    }
+
+    private void hideMapLoadingOverlay() {
+        if (mapLoadingOverlay != null) {
+            mapLoadingOverlay.animate()
+                    .alpha(0f)
+                    .setDuration(300)
+                    .withEndAction(() -> mapLoadingOverlay.setVisibility(View.GONE));
+        }
     }
 
     private void logout() {
