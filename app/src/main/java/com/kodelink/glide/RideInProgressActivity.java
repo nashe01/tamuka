@@ -52,8 +52,6 @@ public class RideInProgressActivity extends AppCompatActivity implements OnMapRe
     private GoogleMap googleMap;
     private TextView tvCommuterName;
     private TextView tvRideStatus;
-    private TextView tvPickupLocation;
-    private TextView tvDestinationLocation;
     private TextView tvDistance;
     private TextView tvDuration;
     private TextView tvFare;
@@ -117,8 +115,6 @@ public class RideInProgressActivity extends AppCompatActivity implements OnMapRe
         mapView = findViewById(R.id.mapView);
         tvCommuterName = findViewById(R.id.tvCommuterName);
         tvRideStatus = findViewById(R.id.tvRideStatus);
-        tvPickupLocation = findViewById(R.id.tvPickupLocation);
-        tvDestinationLocation = findViewById(R.id.tvDestinationLocation);
         tvDistance = findViewById(R.id.tvDistance);
         tvDuration = findViewById(R.id.tvDuration);
         tvFare = findViewById(R.id.tvFare);
@@ -194,8 +190,6 @@ public class RideInProgressActivity extends AppCompatActivity implements OnMapRe
         // Update ride information
         tvCommuterName.setText("Commuter"); // You might want to get actual commuter name
         tvRideStatus.setText("Ride in Progress");
-        tvPickupLocation.setText("Pickup: " + (currentRide.pickupLocation != null ? currentRide.pickupLocation.address : "Unknown"));
-        tvDestinationLocation.setText("Destination: " + (currentRide.destination != null ? currentRide.destination.address : "Unknown"));
         
         // Calculate and display stats
         if (currentRide.pickupLocation != null && currentRide.destination != null) {

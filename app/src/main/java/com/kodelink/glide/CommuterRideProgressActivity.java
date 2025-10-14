@@ -51,8 +51,6 @@ public class CommuterRideProgressActivity extends AppCompatActivity implements O
     private GoogleMap googleMap;
     private TextView tvDriverName;
     private TextView tvRideStatus;
-    private TextView tvPickupLocation;
-    private TextView tvDestinationLocation;
     private TextView tvDistance;
     private TextView tvDuration;
     private TextView tvFare;
@@ -116,8 +114,6 @@ public class CommuterRideProgressActivity extends AppCompatActivity implements O
         mapView = findViewById(R.id.mapView);
         tvDriverName = findViewById(R.id.tvDriverName);
         tvRideStatus = findViewById(R.id.tvRideStatus);
-        tvPickupLocation = findViewById(R.id.tvPickupLocation);
-        tvDestinationLocation = findViewById(R.id.tvDestinationLocation);
         tvDistance = findViewById(R.id.tvDistance);
         tvDuration = findViewById(R.id.tvDuration);
         tvFare = findViewById(R.id.tvFare);
@@ -193,8 +189,6 @@ public class CommuterRideProgressActivity extends AppCompatActivity implements O
         // Update ride information
         tvDriverName.setText("Driver"); // You might want to get actual driver name
         tvRideStatus.setText("Ride in Progress");
-        tvPickupLocation.setText("Pickup: " + (currentRide.pickupLocation != null ? currentRide.pickupLocation.address : "Unknown"));
-        tvDestinationLocation.setText("Destination: " + (currentRide.destination != null ? currentRide.destination.address : "Unknown"));
         
         // Calculate and display stats
         if (currentRide.pickupLocation != null && currentRide.destination != null) {
