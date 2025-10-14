@@ -2,7 +2,9 @@ package com.kodelink.glide;
 
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -35,6 +37,22 @@ public class DatabaseCleanupActivity extends AppCompatActivity {
         LinearLayout mainLayout = new LinearLayout(this);
         mainLayout.setOrientation(LinearLayout.VERTICAL);
         mainLayout.setPadding(32, 32, 32, 32);
+        
+        // Back button
+        ImageButton backButton = new ImageButton(this);
+        backButton.setImageResource(R.drawable.ic_arrow_back);
+        backButton.setBackground(null);
+        backButton.setPadding(16, 16, 16, 16);
+        backButton.setOnClickListener(v -> finish());
+        
+        // Set layout parameters for back button
+        LinearLayout.LayoutParams backButtonParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        backButtonParams.setMargins(0, 0, 0, 16);
+        backButton.setLayoutParams(backButtonParams);
+        mainLayout.addView(backButton);
         
         // Title
         TextView title = new TextView(this);
