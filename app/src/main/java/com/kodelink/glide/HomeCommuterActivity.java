@@ -405,12 +405,11 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
 
 
     private void showLogoutConfirmationDialog() {
-        androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(this);
+        android.app.Dialog dialog = new android.app.Dialog(this);
         android.view.LayoutInflater inflater = getLayoutInflater();
         android.view.View dialogView = inflater.inflate(R.layout.custom_logout_dialog, null);
         
-        builder.setView(dialogView);
-        androidx.appcompat.app.AlertDialog dialog = builder.create();
+        dialog.setContentView(dialogView);
         
         // Set up button listeners
         android.widget.Button btnCancel = dialogView.findViewById(R.id.btnCancel);
@@ -422,12 +421,13 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
             logout();
         });
         
-        dialog.show();
-        
-        // Ensure rounded corners are properly applied
+        // Set window properties to respect custom width
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+            dialog.getWindow().setLayout(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
         }
+        
+        dialog.show();
     }
 
     private void logout() {
