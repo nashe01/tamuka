@@ -150,6 +150,9 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private com.google.firebase.database.ValueEventListener activeRideListener;
     private boolean hasActiveRide = false;
     
+    // Real-time driver location tracking
+    private com.google.firebase.database.ValueEventListener realTimeLocationListener;
+    
     // Driver tracking for timeout handling
     private String currentRequestedDriverId;
     private List<String> timedOutDriverIds = new ArrayList<>();
@@ -421,6 +424,10 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         // Remove active ride listener
         if (activeRideListener != null) {
             firebaseService.removeRideRequestsListener(activeRideListener);
+        }
+        // Remove real-time location listener
+        if (realTimeLocationListener != null) {
+            firebaseService.getRealtimeDatabase().child("drivers_live").removeEventListener(realTimeLocationListener);
         }
         // Stop timeout timer
         stopTimeoutTimer();
@@ -759,6 +766,9 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                 Toast.makeText(HomeCommuterActivity.this, "Error loading drivers: " + databaseError.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
+        
+        // Start real-time location updates for all available drivers
+        startRealTimeDriverLocationUpdates();
     }
 
     private void displayDriverMarkers() {
@@ -805,6 +815,119 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private void showDriverInfoCard(Driver driver) {
         // This method is now handled by the custom info window adapter
         // The info window will be shown when marker is clicked
+    }
+    
+    /**
+     * Start real-time location updates for all available drivers
+     */
+    private void startRealTimeDriverLocationUpdates() {
+        Log.d("RealTimeLocation", "Starting real-time driver location updates");
+        
+        // Remove existing listener if any
+        if (realTimeLocationListener != null) {
+            firebaseService.getRealtimeDatabase().child("drivers_live").removeEventListener(realTimeLocationListener);
+        }
+        
+        // Listen for real-time location updates from all drivers
+        realTimeLocationListener = new com.google.firebase.database.ValueEventListener() {
+                @Override
+                public void onDataChange(com.google.firebase.database.DataSnapshot dataSnapshot) {
+                    for (com.google.firebase.database.DataSnapshot driverSnapshot : dataSnapshot.getChildren()) {
+                        String driverId = driverSnapshot.getKey();
+                        if (driverId != null) {
+                            // Check if driver is available
+                            String status = driverSnapshot.child("status").getValue(String.class);
+                            if ("available".equals(status)) {
+                                // Get location data
+                                com.google.firebase.database.DataSnapshot locationSnapshot = driverSnapshot.child("location");
+                                if (locationSnapshot.exists()) {
+                                    Double lat = locationSnapshot.child("lat").getValue(Double.class);
+                                    Double lng = locationSnapshot.child("lng").getValue(Double.class);
+                                    Long timestamp = locationSnapshot.child("timestamp").getValue(Long.class);
+                                    
+                                    if (lat != null && lng != null) {
+                                        // Update driver location in real-time
+                                        updateDriverMarkerLocation(driverId, lat, lng, timestamp);
+                                    }
+                                }
+                            } else {
+                                // Driver is not available, remove marker if exists
+                                removeDriverMarker(driverId);
+                            }
+                        }
+                    }
+                }
+                
+                @Override
+                public void onCancelled(com.google.firebase.database.DatabaseError databaseError) {
+                    Log.e("RealTimeLocation", "Error listening for driver location updates: " + databaseError.getMessage());
+                }
+            };
+        
+        firebaseService.getRealtimeDatabase().child("drivers_live").addValueEventListener(realTimeLocationListener);
+    }
+    
+    /**
+     * Stop real-time driver location updates
+     */
+    private void stopRealTimeDriverLocationUpdates() {
+        if (realTimeLocationListener != null) {
+            firebaseService.getRealtimeDatabase().child("drivers_live").removeEventListener(realTimeLocationListener);
+            realTimeLocationListener = null;
+            Log.d("RealTimeLocation", "Stopped real-time driver location updates");
+        }
+    }
+    
+    /**
+     * Update driver marker location in real-time
+     */
+    private void updateDriverMarkerLocation(String driverId, double lat, double lng, Long timestamp) {
+        // Check if timestamp is recent (within last 5 minutes)
+        if (timestamp != null && (System.currentTimeMillis() - timestamp) > 300000) {
+            Log.d("RealTimeLocation", "Skipping stale location update for driver: " + driverId);
+            return;
+        }
+        
+        // Find existing marker for this driver
+        Marker existingMarker = null;
+        for (Marker marker : driverMarkers) {
+            if (marker.getTag() != null && marker.getTag() instanceof Driver) {
+                Driver driver = (Driver) marker.getTag();
+                if (driverId.equals(driver.driverId)) {
+                    existingMarker = marker;
+                    break;
+                }
+            }
+        }
+        
+        if (existingMarker != null) {
+            // Update existing marker position
+            LatLng newLocation = new LatLng(lat, lng);
+            existingMarker.setPosition(newLocation);
+            
+            // Update driver object location
+            Driver driver = (Driver) existingMarker.getTag();
+            if (driver != null) {
+                driver.currentLocation = new Driver.LocationData(lat, lng, "Current Location");
+            }
+            
+            Log.d("RealTimeLocation", "Updated marker position for driver: " + driverId + " to " + lat + ", " + lng);
+        } else {
+            // Create new marker if driver is available but marker doesn't exist
+            // This handles cases where driver becomes available after initial load
+            firebaseService.getDriverDetails(driverId)
+                .addOnSuccessListener(driver -> {
+                    if (driver != null && "available".equals(driver.status)) {
+                        driver.currentLocation = new Driver.LocationData(lat, lng, "Current Location");
+                        availableDrivers.add(driver);
+                        displayDriverMarkers();
+                        Log.d("RealTimeLocation", "Created new marker for driver: " + driverId);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("RealTimeLocation", "Failed to get driver details for " + driverId, e);
+                });
+        }
     }
     
     /**
@@ -991,6 +1114,8 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                                 Toast.makeText(HomeCommuterActivity.this, "Ride accepted! Driver is on the way.", Toast.LENGTH_LONG).show();
                                 // Update active ride state
                                 hasActiveRide = true;
+                                // Stop real-time driver location updates since ride is accepted
+                                stopRealTimeDriverLocationUpdates();
                                 
                                 // Stop the countdown timer and hide the countdown card
                                 stopTimeoutTimer();
@@ -1029,6 +1154,8 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                                 // Reset active ride state
                                 hasActiveRide = false;
                                 activeRideRequest = null;
+                                // Restart real-time driver location updates
+                                startRealTimeDriverLocationUpdates();
                                 break;
                             case "cancelled":
                                 Toast.makeText(HomeCommuterActivity.this, "Ride cancelled.", Toast.LENGTH_LONG).show();
@@ -1037,6 +1164,8 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                                 activeRideRequest = null;
                                 // Stop timeout timer
                                 stopTimeoutTimer();
+                                // Restart real-time driver location updates
+                                startRealTimeDriverLocationUpdates();
                                 break;
                             case "timeout":
                                 Toast.makeText(HomeCommuterActivity.this, "Ride request timed out. No driver accepted within 2 minutes.", Toast.LENGTH_LONG).show();
@@ -1045,7 +1174,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                                 activeRideRequest = null;
                                 // Stop timeout timer
                                 stopTimeoutTimer();
-                                // Show nearby drivers again
+                                // Show nearby drivers again and restart real-time updates
                                 showNearbyDrivers();
                                 break;
                         }

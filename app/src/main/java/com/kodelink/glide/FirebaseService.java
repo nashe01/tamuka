@@ -88,6 +88,13 @@ public class FirebaseService {
         }
         return instance;
     }
+    
+    /**
+     * Get Realtime Database reference
+     */
+    public DatabaseReference getRealtimeDatabase() {
+        return realtimeDb;
+    }
 
     // ==================== AUTHENTICATION ====================
     

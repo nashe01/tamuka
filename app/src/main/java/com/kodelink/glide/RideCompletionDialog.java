@@ -45,9 +45,17 @@ public class RideCompletionDialog extends Dialog {
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.dialog_ride_completion);
         
-        // Set dialog properties
+        // Set dialog properties for square shape
         getWindow().setBackgroundDrawableResource(android.R.color.transparent);
         setCancelable(false);
+        
+        // Set dialog window properties for dynamic sizing
+        Window window = getWindow();
+        if (window != null) {
+            // Let the dialog size itself based on content
+            window.setLayout(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, 
+                           android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
         
         // Initialize views
         initializeViews();
