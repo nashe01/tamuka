@@ -43,7 +43,8 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseFirestore mFirestore;
     
     // Splash screen display duration in milliseconds
-    private static final int SPLASH_DISPLAY_LENGTH = 1500; // 1.5 seconds
+    private static final int SPLASH_DISPLAY_LENGTH = 1000; // 1000ms for all users
+    private static final int SPLASH_DISPLAY_LENGTH_LOGGED_IN = 2000; // 1000ms for logged-in users
 
     /**
      * Called when the activity is first created.
@@ -67,99 +68,48 @@ public class MainActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         mFirestore = FirebaseFirestore.getInstance();
 
-        // Show splash screen for a fixed duration, then check authentication
+        // Show splash screen for the specified duration, then check authentication
         new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
             @Override
             public void run() {
-                checkAuthenticationAndNavigate();
+                FirebaseUser user = mAuth.getCurrentUser();
+                if (user != null) {
+                    prepareMainScreenForUser(user.getUid());
+                } else {
+                    startActivity(new Intent(MainActivity.this, OnboardingActivity.class));
+                    overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
+                    finish();
+                }
             }
         }, SPLASH_DISPLAY_LENGTH);
     }
 
     /**
-     * Checks authentication status and navigates to appropriate screen.
-     * This method is called after the splash screen delay.
+     * Prepares the main screen for a logged-in user by checking their role.
+     * This method handles the transition directly in the Firestore callback to prevent black screens.
      */
-    private void checkAuthenticationAndNavigate() {
-        try {
-            FirebaseUser currentUser = mAuth.getCurrentUser();
-            if (currentUser != null) {
-                // User is already logged in - check role and navigate
-                checkUserRoleAndNavigate(currentUser.getUid());
-            } else {
-                // Not logged in - go to onboarding
-                navigateToOnboarding();
-            }
-        } catch (Exception e) {
-            // If there's any error with authentication, go to onboarding
-            Toast.makeText(this, "Authentication error, please login again", Toast.LENGTH_SHORT).show();
-            navigateToOnboarding();
-        }
-    }
-
-    /**
-     * Checks the user's role in Firestore and navigates to the appropriate activity.
-     * Handles role-based routing for commuters and drivers.
-     * 
-     * @param userId The Firebase user ID to check role for
-     */
-    private void checkUserRoleAndNavigate(String userId) {
-        try {
-            // Check user role in Firestore
-            mFirestore.collection("users").document(userId).get()
-                    .addOnCompleteListener(task -> {
-                        try {
-                            if (task.isSuccessful()) {
-                                DocumentSnapshot document = task.getResult();
-                                if (document.exists()) {
-                                    String role = document.getString("role");
-                                    if ("commuter".equals(role)) {
-                                        // User is a commuter - navigate directly to commuter home
-                                        Intent intent = new Intent(MainActivity.this, HomeCommuterActivity.class);
-                                        startActivity(intent);
-                                        finish();
-                                    } else if ("driver".equals(role)) {
-                                        // User is a driver - navigate directly to driver dashboard
-                                        Intent intent = new Intent(MainActivity.this, DashboardDriverActivity.class);
-                                        startActivity(intent);
-                                        finish();
-                                    } else {
-                                        // Invalid role - sign out and go to onboarding
-                                        mAuth.signOut();
-                                        navigateToOnboarding();
-                                    }
-                                } else {
-                                    // User document not found - sign out and go to onboarding
-                                    mAuth.signOut();
-                                    navigateToOnboarding();
-                                }
-                            } else {
-                                // Firestore error - sign out and go to onboarding
-                                mAuth.signOut();
-                                navigateToOnboarding();
-                            }
-                        } catch (Exception e) {
-                            // If there's any error during navigation, go to onboarding
-                            Toast.makeText(MainActivity.this, "Navigation error, please login again", Toast.LENGTH_SHORT).show();
-                            mAuth.signOut();
-                            navigateToOnboarding();
+    private void prepareMainScreenForUser(String userId) {
+        mFirestore.collection("users").document(userId).get()
+                .addOnCompleteListener(task -> {
+                    Intent intent;
+                    if (task.isSuccessful() && task.getResult().exists()) {
+                        String role = task.getResult().getString("role");
+                        if ("commuter".equals(role)) {
+                            intent = new Intent(MainActivity.this, HomeCommuterActivity.class);
+                        } else if ("driver".equals(role)) {
+                            intent = new Intent(MainActivity.this, DashboardDriverActivity.class);
+                        } else {
+                            intent = new Intent(MainActivity.this, OnboardingActivity.class);
                         }
-                    });
-        } catch (Exception e) {
-            // If there's any error with the role check, go to onboarding
-            Toast.makeText(this, "Role check error, please login again", Toast.LENGTH_SHORT).show();
-            mAuth.signOut();
-            navigateToOnboarding();
-        }
+                    } else {
+                        intent = new Intent(MainActivity.this, OnboardingActivity.class);
+                    }
+
+                    // Start the activity with smooth fade transition
+                    startActivity(intent);
+                    overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
+                    finish();
+                });
     }
 
-    /**
-     * Navigates to the onboarding activity for new or unauthenticated users.
-     * This is the entry point for the user registration/login flow.
-     */
-    private void navigateToOnboarding() {
-        Intent intent = new Intent(MainActivity.this, OnboardingActivity.class);
-        startActivity(intent);
-        finish();
-    }
 }

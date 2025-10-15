@@ -74,33 +74,50 @@ public class RideHistoryAdapter extends RecyclerView.Adapter<RideHistoryAdapter.
             tvPickupLocation.setText(item.pickupLocation);
             tvDestinationLocation.setText(item.destinationLocation);
 
-            // Set status with color
-            tvStatus.setText(item.status.toUpperCase());
-            switch (item.status.toLowerCase()) {
-                case "completed":
-                    tvStatus.setTextColor(itemView.getContext().getColor(android.R.color.holo_green_dark));
-                    break;
-                case "cancelled":
-                    tvStatus.setTextColor(itemView.getContext().getColor(android.R.color.holo_red_dark));
-                    break;
-                case "pending":
-                    tvStatus.setTextColor(itemView.getContext().getColor(android.R.color.holo_orange_dark));
-                    break;
-                default:
-                    tvStatus.setTextColor(itemView.getContext().getColor(android.R.color.black));
-                    break;
-            }
+            // Set status with enhanced color handling
+            tvStatus.setText(item.getStatusDisplayText());
+            setStatusColor(item.status);
 
             // Set people and price
             tvPeople.setText(item.people + " person" + (item.people > 1 ? "s" : ""));
-            tvPrice.setText("$" + String.format("%.2f", item.priceEach) + " each");
-
-            // Set user info based on role
-            if (item.userRole.equals("driver")) {
-                tvUserInfo.setText("Rider: " + item.commuterId);
+            
+            // Enhanced price display
+            if (item.totalPrice != null && !item.totalPrice.isEmpty()) {
+                tvPrice.setText("Total: $" + item.totalPrice);
             } else {
-                tvUserInfo.setText("Driver: " + item.driverId);
+                tvPrice.setText("$" + String.format("%.2f", item.priceEach) + " each");
             }
+
+            // Set user info with names if available
+            tvUserInfo.setText(item.getOtherPartyName());
+        }
+        
+        private void setStatusColor(String status) {
+            int color;
+            switch (status.toLowerCase()) {
+                case "completed":
+                    color = itemView.getContext().getColor(android.R.color.holo_green_dark);
+                    break;
+                case "declined":
+                    color = itemView.getContext().getColor(android.R.color.holo_red_dark);
+                    break;
+                case "cancelled":
+                    color = itemView.getContext().getColor(android.R.color.holo_red_dark);
+                    break;
+                case "timeout":
+                    color = itemView.getContext().getColor(android.R.color.holo_orange_dark);
+                    break;
+                case "pending":
+                    color = itemView.getContext().getColor(android.R.color.holo_orange_dark);
+                    break;
+                case "accepted":
+                    color = itemView.getContext().getColor(android.R.color.holo_blue_dark);
+                    break;
+                default:
+                    color = itemView.getContext().getColor(android.R.color.black);
+                    break;
+            }
+            tvStatus.setTextColor(color);
         }
     }
 }

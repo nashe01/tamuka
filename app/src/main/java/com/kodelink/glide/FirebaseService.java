@@ -509,18 +509,74 @@ public class FirebaseService {
     
     /**
      * Get current user's entity ID (driverId or commuterId)
+     * This method works with both Firebase Auth and mock authentication
      */
     public Task<String> getCurrentUserEntityId() {
-        if (auth.getCurrentUser() == null) {
-            return Tasks.forException(new Exception("No authenticated user"));
+        // First try Firebase Auth
+        if (auth.getCurrentUser() != null) {
+            return firestore.collection("users").document(auth.getCurrentUser().getUid()).get()
+                .continueWith(task -> {
+                    if (task.isSuccessful() && task.getResult().exists()) {
+                        return task.getResult().getString("entityId");
+                    }
+                    return null;
+                });
         }
         
-        return firestore.collection("users").document(auth.getCurrentUser().getUid()).get()
+        // If Firebase Auth fails, return null (will be handled by calling activity)
+        return Tasks.forResult(null);
+    }
+    
+    /**
+     * Get current user's entity ID using phone number (for mock authentication)
+     */
+    public Task<String> getCurrentUserEntityIdByPhone(String phone, String role) {
+        Log.d(TAG, "Getting entity ID for phone: " + phone + ", role: " + role);
+        if (role.equals("driver")) {
+            return firestore.collection("drivers")
+                .whereEqualTo("phone", phone)
+                .limit(1)
+                .get()
+                .continueWith(task -> {
+                    if (task.isSuccessful() && !task.getResult().isEmpty()) {
+                        String driverId = task.getResult().getDocuments().get(0).getString("driverId");
+                        Log.d(TAG, "Found driver ID: " + driverId);
+                        return driverId;
+                    }
+                    Log.d(TAG, "No driver found for phone: " + phone);
+                    return null;
+                });
+        } else {
+            return firestore.collection("commuters")
+                .whereEqualTo("phone", phone)
+                .limit(1)
+                .get()
+                .continueWith(task -> {
+                    if (task.isSuccessful() && !task.getResult().isEmpty()) {
+                        String commuterId = task.getResult().getDocuments().get(0).getString("commuterId");
+                        Log.d(TAG, "Found commuter ID: " + commuterId);
+                        return commuterId;
+                    }
+                    Log.d(TAG, "No commuter found for phone: " + phone);
+                    return null;
+                });
+        }
+    }
+    
+    /**
+     * Debug method to check if there are any rides in the database
+     */
+    public Task<Integer> getTotalRideCount() {
+        return firestore.collection("rideRequests").get()
             .continueWith(task -> {
-                if (task.isSuccessful() && task.getResult().exists()) {
-                    return task.getResult().getString("entityId");
+                if (task.isSuccessful()) {
+                    int count = task.getResult().size();
+                    Log.d(TAG, "Total rides in database: " + count);
+                    return count;
+                } else {
+                    Log.e(TAG, "Failed to get ride count", task.getException());
+                    return 0;
                 }
-                return null;
             });
     }
 
@@ -582,6 +638,114 @@ public class FirebaseService {
                 return rides;
             });
     }
+    
+    /**
+     * Get user name by ID (works for both drivers and commuters)
+     */
+    public Task<String> getUserName(String userId, String userType) {
+        String collection = userType.equals("driver") ? "drivers" : "commuters";
+        return firestore.collection(collection).document(userId).get()
+            .continueWith(task -> {
+                if (task.isSuccessful() && task.getResult().exists()) {
+                    DocumentSnapshot doc = task.getResult();
+                    return doc.getString("name");
+                }
+                return null;
+            });
+    }
+    
+    /**
+     * Get user phone by ID (works for both drivers and commuters)
+     */
+    public Task<String> getUserPhone(String userId, String userType) {
+        String collection = userType.equals("driver") ? "drivers" : "commuters";
+        return firestore.collection(collection).document(userId).get()
+            .continueWith(task -> {
+                if (task.isSuccessful() && task.getResult().exists()) {
+                    DocumentSnapshot doc = task.getResult();
+                    return doc.getString("phone");
+                }
+                return null;
+            });
+    }
+    
+    /**
+     * Get enhanced ride history for a driver with user names
+     */
+    public Task<List<RideHistoryItem>> getEnhancedDriverRideHistory(String driverId) {
+        Log.d(TAG, "Getting enhanced driver ride history for driverId: " + driverId);
+        return getDriverRideHistory(driverId)
+            .continueWith(task -> {
+                if (task.isSuccessful()) {
+                    List<RideRequest> rides = task.getResult();
+                    Log.d(TAG, "Found " + rides.size() + " rides for driver: " + driverId);
+                    List<RideHistoryItem> historyItems = new ArrayList<>();
+                    
+                    for (RideRequest ride : rides) {
+                        RideHistoryItem item = new RideHistoryItem();
+                        item.rideId = ride.rideId;
+                        item.pickupLocation = ride.pickupLocation.address;
+                        item.destinationLocation = ride.destination.address;
+                        item.status = ride.status;
+                        item.timestamp = ride.timestamp;
+                        item.people = ride.people;
+                        item.priceEach = ride.priceEach;
+                        item.commuterId = ride.commuterId;
+                        item.driverId = ride.driverId;
+                        item.userRole = "driver";
+                        
+                        // Calculate total price
+                        item.totalPrice = String.format("%.2f", ride.people * ride.priceEach);
+                        
+                        Log.d(TAG, "Added ride: " + ride.rideId + " with status: " + ride.status);
+                        historyItems.add(item);
+                    }
+                    return historyItems;
+                } else {
+                    Log.e(TAG, "Failed to get driver ride history", task.getException());
+                    throw task.getException();
+                }
+            });
+    }
+    
+    /**
+     * Get enhanced ride history for a commuter with user names
+     */
+    public Task<List<RideHistoryItem>> getEnhancedCommuterRideHistory(String commuterId) {
+        Log.d(TAG, "Getting enhanced commuter ride history for commuterId: " + commuterId);
+        return getCommuterRideHistory(commuterId)
+            .continueWith(task -> {
+                if (task.isSuccessful()) {
+                    List<RideRequest> rides = task.getResult();
+                    Log.d(TAG, "Found " + rides.size() + " rides for commuter: " + commuterId);
+                    List<RideHistoryItem> historyItems = new ArrayList<>();
+                    
+                    for (RideRequest ride : rides) {
+                        RideHistoryItem item = new RideHistoryItem();
+                        item.rideId = ride.rideId;
+                        item.pickupLocation = ride.pickupLocation.address;
+                        item.destinationLocation = ride.destination.address;
+                        item.status = ride.status;
+                        item.timestamp = ride.timestamp;
+                        item.people = ride.people;
+                        item.priceEach = ride.priceEach;
+                        item.commuterId = ride.commuterId;
+                        item.driverId = ride.driverId;
+                        item.userRole = "commuter";
+                        
+                        // Calculate total price
+                        item.totalPrice = String.format("%.2f", ride.people * ride.priceEach);
+                        
+                        Log.d(TAG, "Added ride: " + ride.rideId + " with status: " + ride.status);
+                        historyItems.add(item);
+                    }
+                    return historyItems;
+                } else {
+                    Log.e(TAG, "Failed to get commuter ride history", task.getException());
+                    throw task.getException();
+                }
+            });
+    }
 
     /**
      * Parse RideRequest from Firestore document
@@ -631,6 +795,231 @@ public class FirebaseService {
             Log.e(TAG, "Error parsing ride request", e);
             return null;
         }
+    }
+
+    /**
+     * Get all pending ride requests for drivers to display on map
+     */
+    public Task<List<RideRequest>> getAllPendingRideRequests() {
+        return firestore.collection("rideRequests")
+            .whereEqualTo("status", "pending")
+            .get()
+            .continueWith(task -> {
+                List<RideRequest> pendingRequests = new ArrayList<>();
+                if (task.isSuccessful()) {
+                    QuerySnapshot snapshot = task.getResult();
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                        RideRequest ride = parseRideRequest(doc);
+                        if (ride != null) {
+                            pendingRequests.add(ride);
+                        }
+                    }
+                }
+                return pendingRequests;
+            });
+    }
+
+    /**
+     * Listen for all pending ride requests in real-time
+     */
+    public void listenAllPendingRideRequests(com.google.firebase.database.ValueEventListener listener) {
+        realtimeDb.child("rideRequestsLive")
+            .orderByChild("status")
+            .equalTo("pending")
+            .addValueEventListener(listener);
+    }
+    
+    /**
+     * Remove ride requests listener
+     */
+    public void removeRideRequestsListener(com.google.firebase.database.ValueEventListener listener) {
+        realtimeDb.child("rideRequestsLive").removeEventListener(listener);
+    }
+
+    /**
+     * Check if commuter has any active ride requests
+     * Returns true if commuter has pending, accepted, or in_progress rides
+     */
+    public Task<Boolean> hasActiveRideRequest(String commuterId) {
+        return firestore.collection("rideRequests")
+            .whereEqualTo("commuterId", commuterId)
+            .whereIn("status", java.util.Arrays.asList("pending", "accepted", "in_progress"))
+            .limit(1)
+            .get()
+            .continueWith(task -> {
+                if (task.isSuccessful()) {
+                    return !task.getResult().isEmpty();
+                }
+                return false;
+            });
+    }
+
+    /**
+     * Get active ride request for a commuter
+     * Returns the first active ride request found
+     */
+    public Task<RideRequest> getActiveRideRequest(String commuterId) {
+        return firestore.collection("rideRequests")
+            .whereEqualTo("commuterId", commuterId)
+            .whereIn("status", java.util.Arrays.asList("pending", "accepted", "in_progress"))
+            .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(1)
+            .get()
+            .continueWith(task -> {
+                if (task.isSuccessful() && !task.getResult().isEmpty()) {
+                    DocumentSnapshot doc = task.getResult().getDocuments().get(0);
+                    return parseRideRequest(doc);
+                }
+                return null;
+            });
+    }
+
+    /**
+     * Listen for active ride request changes for a commuter
+     */
+    public void listenActiveRideRequest(String commuterId, com.google.firebase.database.ValueEventListener listener) {
+        realtimeDb.child("rideRequestsLive")
+            .orderByChild("commuterId")
+            .equalTo(commuterId)
+            .addValueEventListener(listener);
+    }
+
+    /**
+     * Check if driver has any active ride requests
+     * Returns true if driver has accepted or in_progress rides
+     */
+    public Task<Boolean> hasActiveRideRequestForDriver(String driverId) {
+        return firestore.collection("rideRequests")
+            .whereEqualTo("driverId", driverId)
+            .whereIn("status", java.util.Arrays.asList("accepted", "in_progress"))
+            .limit(1)
+            .get()
+            .continueWith(task -> {
+                if (task.isSuccessful()) {
+                    return !task.getResult().isEmpty();
+                }
+                return false;
+            });
+    }
+
+    /**
+     * Get active ride request for a driver
+     * Returns the first active ride request found
+     */
+    public Task<RideRequest> getActiveRideRequestForDriver(String driverId) {
+        return firestore.collection("rideRequests")
+            .whereEqualTo("driverId", driverId)
+            .whereIn("status", java.util.Arrays.asList("accepted", "in_progress"))
+            .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(1)
+            .get()
+            .continueWith(task -> {
+                if (task.isSuccessful() && !task.getResult().isEmpty()) {
+                    DocumentSnapshot doc = task.getResult().getDocuments().get(0);
+                    return parseRideRequest(doc);
+                }
+                return null;
+            });
+    }
+
+    /**
+     * Listen for active ride request changes for a driver
+     */
+    public void listenActiveRideRequestForDriver(String driverId, com.google.firebase.database.ValueEventListener listener) {
+        realtimeDb.child("rideRequestsLive")
+            .orderByChild("driverId")
+            .equalTo(driverId)
+            .addValueEventListener(listener);
+    }
+
+    /**
+     * Complete a ride request (driver marks ride as completed)
+     */
+    public Task<Void> completeRideRequest(String rideId) {
+        // Update status to completed in both databases
+        return updateRideRequestStatus(rideId, "completed");
+    }
+
+    /**
+     * Mark driver as ready to complete ride
+     */
+    public Task<Void> markDriverReadyToComplete(String rideId) {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("driverReadyToComplete", true);
+        
+        return realtimeDb.child("rideRequestsLive").child(rideId)
+            .updateChildren(updates);
+    }
+
+    /**
+     * Mark commuter as ready to complete ride
+     */
+    public Task<Void> markCommuterReadyToComplete(String rideId) {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("commuterReadyToComplete", true);
+        
+        return realtimeDb.child("rideRequestsLive").child(rideId)
+            .updateChildren(updates);
+    }
+
+    /**
+     * Check if both driver and commuter are ready to complete
+     */
+    public Task<Boolean> areBothPartiesReadyToComplete(String rideId) {
+        return realtimeDb.child("rideRequestsLive").child(rideId)
+            .get()
+            .continueWith(task -> {
+                if (task.isSuccessful() && task.getResult().exists()) {
+                    DataSnapshot snapshot = task.getResult();
+                    Boolean driverReady = snapshot.child("driverReadyToComplete").getValue(Boolean.class);
+                    Boolean commuterReady = snapshot.child("commuterReadyToComplete").getValue(Boolean.class);
+                    
+                    return (driverReady != null && driverReady) && 
+                           (commuterReady != null && commuterReady);
+                }
+                return false;
+            });
+    }
+
+    /**
+     * Cancel a ride request (commuter cancels before driver accepts)
+     */
+    public Task<Void> cancelRideRequest(String rideId) {
+        // Update status to cancelled in both databases
+        return updateRideRequestStatus(rideId, "cancelled");
+    }
+
+    /**
+     * Timeout a ride request (automatic cancellation after 2 minutes)
+     */
+    public Task<Void> timeoutRideRequest(String rideId) {
+        // Update status to timeout in both databases
+        return updateRideRequestStatus(rideId, "timeout");
+    }
+
+    /**
+     * Check for expired ride requests and clean them up
+     */
+    public Task<Void> cleanupExpiredRideRequests() {
+        long twoMinutesAgo = System.currentTimeMillis() - (2 * 60 * 1000); // 2 minutes ago
+        
+        return firestore.collection("rideRequests")
+            .whereEqualTo("status", "pending")
+            .whereLessThan("timestamp", twoMinutesAgo)
+            .get()
+            .continueWithTask(task -> {
+                if (task.isSuccessful() && !task.getResult().isEmpty()) {
+                    List<Task<Void>> timeoutTasks = new ArrayList<>();
+                    for (DocumentSnapshot doc : task.getResult().getDocuments()) {
+                        String rideId = doc.getString("rideId");
+                        if (rideId != null) {
+                            timeoutTasks.add(timeoutRideRequest(rideId));
+                        }
+                    }
+                    return Tasks.whenAll(timeoutTasks);
+                }
+                return Tasks.forResult(null);
+            });
     }
 
     // ==================== CALLBACK INTERFACES ====================
