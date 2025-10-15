@@ -36,6 +36,8 @@
     <!-- Status Colors -->
     <color name="red">#F44336</color>           <!-- Error/decline color -->
     <color name="green">#4CAF50</color>         <!-- Success/accept color -->
+    <color name="orange">#FF9800</color>        <!-- Warning/pending color -->
+    <color name="light_gray">#F5F5F5</color>    <!-- Light gray background -->
     
     <!-- Neutral Gray Scale -->
     <color name="gray">#9E9E9E</color>          <!-- Standard gray -->

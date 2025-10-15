@@ -885,6 +885,103 @@ public class FirebaseService {
     }
 
     /**
+     * Check if driver has any active ride requests
+     * Returns true if driver has accepted or in_progress rides
+     */
+    public Task<Boolean> hasActiveRideRequestForDriver(String driverId) {
+        return firestore.collection("rideRequests")
+            .whereEqualTo("driverId", driverId)
+            .whereIn("status", java.util.Arrays.asList("accepted", "in_progress"))
+            .limit(1)
+            .get()
+            .continueWith(task -> {
+                if (task.isSuccessful()) {
+                    return !task.getResult().isEmpty();
+                }
+                return false;
+            });
+    }
+
+    /**
+     * Get active ride request for a driver
+     * Returns the first active ride request found
+     */
+    public Task<RideRequest> getActiveRideRequestForDriver(String driverId) {
+        return firestore.collection("rideRequests")
+            .whereEqualTo("driverId", driverId)
+            .whereIn("status", java.util.Arrays.asList("accepted", "in_progress"))
+            .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(1)
+            .get()
+            .continueWith(task -> {
+                if (task.isSuccessful() && !task.getResult().isEmpty()) {
+                    DocumentSnapshot doc = task.getResult().getDocuments().get(0);
+                    return parseRideRequest(doc);
+                }
+                return null;
+            });
+    }
+
+    /**
+     * Listen for active ride request changes for a driver
+     */
+    public void listenActiveRideRequestForDriver(String driverId, com.google.firebase.database.ValueEventListener listener) {
+        realtimeDb.child("rideRequestsLive")
+            .orderByChild("driverId")
+            .equalTo(driverId)
+            .addValueEventListener(listener);
+    }
+
+    /**
+     * Complete a ride request (driver marks ride as completed)
+     */
+    public Task<Void> completeRideRequest(String rideId) {
+        // Update status to completed in both databases
+        return updateRideRequestStatus(rideId, "completed");
+    }
+
+    /**
+     * Mark driver as ready to complete ride
+     */
+    public Task<Void> markDriverReadyToComplete(String rideId) {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("driverReadyToComplete", true);
+        
+        return realtimeDb.child("rideRequestsLive").child(rideId)
+            .updateChildren(updates);
+    }
+
+    /**
+     * Mark commuter as ready to complete ride
+     */
+    public Task<Void> markCommuterReadyToComplete(String rideId) {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("commuterReadyToComplete", true);
+        
+        return realtimeDb.child("rideRequestsLive").child(rideId)
+            .updateChildren(updates);
+    }
+
+    /**
+     * Check if both driver and commuter are ready to complete
+     */
+    public Task<Boolean> areBothPartiesReadyToComplete(String rideId) {
+        return realtimeDb.child("rideRequestsLive").child(rideId)
+            .get()
+            .continueWith(task -> {
+                if (task.isSuccessful() && task.getResult().exists()) {
+                    DataSnapshot snapshot = task.getResult();
+                    Boolean driverReady = snapshot.child("driverReadyToComplete").getValue(Boolean.class);
+                    Boolean commuterReady = snapshot.child("commuterReadyToComplete").getValue(Boolean.class);
+                    
+                    return (driverReady != null && driverReady) && 
+                           (commuterReady != null && commuterReady);
+                }
+                return false;
+            });
+    }
+
+    /**
      * Cancel a ride request (commuter cancels before driver accepts)
      */
     public Task<Void> cancelRideRequest(String rideId) {

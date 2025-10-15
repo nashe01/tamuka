@@ -89,6 +89,15 @@
         <activity
             android:name=".RideHistoryActivity"
             android:exported="false" />
+        <activity
+            android:name=".RideInProgressActivity"
+            android:exported="false" />
+        <activity
+            android:name=".CommuterRideProgressActivity"
+            android:exported="false" />
+        <activity
+            android:name=".DatabaseCleanupActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

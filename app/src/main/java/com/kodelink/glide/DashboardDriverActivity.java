@@ -85,6 +85,11 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
     private RideRequest currentRideRequest;
     private Polyline routeToPickup;
     
+    // Driver active ride tracking
+    private boolean hasActiveRide = false;
+    private RideRequest activeRideRequest;
+    private com.google.firebase.database.ValueEventListener activeRideListener;
+    
     // Ride request markers variables
     private List<RideRequest> pendingRideRequests = new ArrayList<>();
     private Map<String, com.google.android.gms.maps.model.Marker> rideRequestMarkers = new HashMap<>();
@@ -99,8 +104,6 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
     private TextView tvPriceEach;
     private TextView tvDistanceToCommuter;
     private TextView tvDistanceToDestination;
-    private TextView tvPickupLocation;
-    private TextView tvDestinationLocation;
     private Button btnDeclineRide;
     private Button btnAcceptRide;
     private Animation slideUpAnimation;
@@ -145,6 +148,9 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
                     
                     // Set up real-time listener for all pending ride requests
                     setupRideRequestsListener();
+                    
+                    // Check for any active rides the driver might have
+                    checkForActiveRides();
                 } else {
                     Toast.makeText(this, "Driver profile not found. Please register again.", Toast.LENGTH_LONG).show();
                     logout();
@@ -176,6 +182,13 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
         switchAvailability.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (currentDriverId == null) {
                 Toast.makeText(this, "Driver ID not available. Please wait...", Toast.LENGTH_SHORT).show();
+                switchAvailability.setChecked(!isChecked); // Revert the change
+                return;
+            }
+            
+            // Check if driver has an active ride
+            if (hasActiveRide) {
+                Toast.makeText(this, "Cannot change status while you have an active ride. Complete your current ride first.", Toast.LENGTH_LONG).show();
                 switchAvailability.setChecked(!isChecked); // Revert the change
                 return;
             }
@@ -230,6 +243,14 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
                 return true;
             }
             return false;
+        });
+        
+        // Set up map click listener to hide ride request card when tapping outside
+        googleMap.setOnMapClickListener(latLng -> {
+            // Hide the ride request card when tapping on the map
+            if (rideRequestCard != null && rideRequestCard.getVisibility() == View.VISIBLE) {
+                hideRideRequestCard();
+            }
         });
         
         // Set up map camera change listener to detect when tiles are loaded
@@ -365,6 +386,11 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
         if (rideRequestsListener != null) {
             firebaseService.removeRideRequestsListener(rideRequestsListener);
         }
+        
+        // Clean up active ride listener
+        if (activeRideListener != null) {
+            firebaseService.removeRideRequestsListener(activeRideListener);
+        }
     }
 
     @Override
@@ -385,8 +411,10 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
             startActivity(intent);
         } else if (id == R.id.nav_notifications) {
             Toast.makeText(this, "Notifications clicked", Toast.LENGTH_SHORT).show();
-        } else if (id == R.id.nav_settings) {
-            Toast.makeText(this, "Settings clicked", Toast.LENGTH_SHORT).show();
+        } else if (id == R.id.nav_cleanup) {
+            // Handle database cleanup action
+            Intent intent = new Intent(this, DatabaseCleanupActivity.class);
+            startActivity(intent);
         } else if (id == R.id.nav_logout) {
             showLogoutConfirmationDialog();
         }
@@ -526,6 +554,23 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
     
     
     private void acceptRideRequest(RideRequest rideRequest) {
+        // Check if driver already has an active ride
+        if (hasActiveRide) {
+            String statusMessage = "You already have an active ride";
+            if (activeRideRequest != null) {
+                switch (activeRideRequest.status) {
+                    case "accepted":
+                        statusMessage = "You have already accepted a ride. Please complete this ride before accepting another.";
+                        break;
+                    case "in_progress":
+                        statusMessage = "You have a ride in progress. Please complete this ride before accepting another.";
+                        break;
+                }
+            }
+            Toast.makeText(this, statusMessage, Toast.LENGTH_LONG).show();
+            return;
+        }
+        
         // Hide the ride request card
         hideRideRequestCard();
         
@@ -534,14 +579,20 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
             .addOnSuccessListener(aVoid -> {
                 Toast.makeText(DashboardDriverActivity.this, "Ride accepted! Showing route to pickup location.", Toast.LENGTH_LONG).show();
                 
-                // Draw route from driver location to pickup location
-                if (currentLocation != null) {
-                    LatLng pickupLocation = new LatLng(rideRequest.pickupLocation.lat, rideRequest.pickupLocation.lng);
-                    drawRouteToPickup(currentLocation, pickupLocation);
-                    
-                    // Move camera to show both locations
-                    moveCameraToShowRoute(currentLocation, pickupLocation);
-                }
+                // Set active ride state
+                hasActiveRide = true;
+                activeRideRequest = rideRequest;
+                
+                // Update driver status to busy
+                firebaseService.updateDriverStatus(currentDriverId, "busy");
+                
+                // Navigate to ride in progress activity
+                Intent intent = new Intent(DashboardDriverActivity.this, RideInProgressActivity.class);
+                intent.putExtra("rideId", rideRequest.rideId);
+                startActivity(intent);
+                
+                // Set up listener for active ride updates
+                setupActiveRideListener();
             })
             .addOnFailureListener(e -> {
                 Toast.makeText(DashboardDriverActivity.this, "Failed to accept ride: " + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -819,8 +870,6 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
         tvPriceEach = rideRequestCard.findViewById(R.id.tvPriceEach);
         tvDistanceToCommuter = rideRequestCard.findViewById(R.id.tvDistanceToCommuter);
         tvDistanceToDestination = rideRequestCard.findViewById(R.id.tvDistanceToDestination);
-        tvPickupLocation = rideRequestCard.findViewById(R.id.tvPickupLocation);
-        tvDestinationLocation = rideRequestCard.findViewById(R.id.tvDestinationLocation);
         btnDeclineRide = rideRequestCard.findViewById(R.id.btnDeclineRide);
         btnAcceptRide = rideRequestCard.findViewById(R.id.btnAcceptRide);
         
@@ -869,8 +918,6 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
         
         // Populate card with ride request information
         tvRequestTime.setText("Just now");
-        tvPickupLocation.setText(rideRequest.pickupLocation.address);
-        tvDestinationLocation.setText(rideRequest.destination.address);
         
         // Set people count and price
         tvPeopleCount.setText(String.valueOf(rideRequest.people));
@@ -1078,6 +1125,139 @@ public class DashboardDriverActivity extends AppCompatActivity implements OnMapR
         } catch (Exception e) {
             Log.e("RideRequests", "Error parsing ride request from snapshot", e);
             return null;
+        }
+    }
+    
+    /**
+     * Check for any active rides the driver might have
+     */
+    private void checkForActiveRides() {
+        if (currentDriverId == null) {
+            Log.e("ActiveRide", "Driver ID not available for active ride check");
+            return;
+        }
+        
+        firebaseService.hasActiveRideRequestForDriver(currentDriverId)
+            .addOnSuccessListener(hasActive -> {
+                if (hasActive) {
+                    firebaseService.getActiveRideRequestForDriver(currentDriverId)
+                        .addOnSuccessListener(activeRide -> {
+                            if (activeRide != null) {
+                                activeRideRequest = activeRide;
+                                hasActiveRide = true;
+                                
+                                // Update driver status to busy
+                                firebaseService.updateDriverStatus(currentDriverId, "busy");
+                                
+                                // Update UI to show active ride
+                                updateUIForActiveRide(activeRide);
+                                
+                                // Set up listener for active ride updates
+                                setupActiveRideListener();
+                                
+                                Log.d("ActiveRide", "Driver has active ride: " + activeRide.rideId + ", status: " + activeRide.status);
+                            }
+                        })
+                        .addOnFailureListener(e -> {
+                            Log.e("ActiveRide", "Failed to get active ride details", e);
+                        });
+                } else {
+                    hasActiveRide = false;
+                    activeRideRequest = null;
+                    Log.d("ActiveRide", "No active rides found for driver");
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e("ActiveRide", "Failed to check for active rides", e);
+            });
+    }
+    
+    /**
+     * Set up listener for active ride updates
+     */
+    private void setupActiveRideListener() {
+        if (currentDriverId == null || activeRideListener != null) {
+            return;
+        }
+        
+        activeRideListener = new com.google.firebase.database.ValueEventListener() {
+            @Override
+            public void onDataChange(com.google.firebase.database.DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    // Parse the active ride from snapshot
+                    RideRequest ride = parseRideRequestFromSnapshot(dataSnapshot);
+                    if (ride != null) {
+                        activeRideRequest = ride;
+                        hasActiveRide = true;
+                        
+                        // Update UI based on status
+                        updateUIForActiveRide(ride);
+                    }
+                } else {
+                    // No active ride
+                    hasActiveRide = false;
+                    activeRideRequest = null;
+                    
+                    // Update driver status back to available
+                    firebaseService.updateDriverStatus(currentDriverId, "available");
+                    
+                    // Clear any existing route
+                    clearRouteToPickup();
+                }
+            }
+            
+            @Override
+            public void onCancelled(com.google.firebase.database.DatabaseError databaseError) {
+                Log.e("ActiveRide", "Error listening to active ride: " + databaseError.getMessage());
+            }
+        };
+        
+        firebaseService.listenActiveRideRequestForDriver(currentDriverId, activeRideListener);
+    }
+    
+    /**
+     * Update UI based on active ride status
+     */
+    private void updateUIForActiveRide(RideRequest ride) {
+        switch (ride.status) {
+            case "accepted":
+                // Update UI to show driver is busy
+                tvAvailabilityStatus.setText("Busy - Active Ride");
+                tvAvailabilityStatus.setTextColor(getResources().getColor(R.color.orange));
+                switchAvailability.setChecked(false);
+                switchAvailability.setEnabled(false);
+                Toast.makeText(this, "You have an accepted ride. Complete this ride before accepting another.", Toast.LENGTH_LONG).show();
+                break;
+            case "in_progress":
+                // Update UI to show driver is busy
+                tvAvailabilityStatus.setText("Busy - Ride in Progress");
+                tvAvailabilityStatus.setTextColor(getResources().getColor(R.color.orange));
+                switchAvailability.setChecked(false);
+                switchAvailability.setEnabled(false);
+                Toast.makeText(this, "You have a ride in progress. Complete this ride before accepting another.", Toast.LENGTH_LONG).show();
+                break;
+            case "completed":
+                hasActiveRide = false;
+                activeRideRequest = null;
+                firebaseService.updateDriverStatus(currentDriverId, "available");
+                // Reset UI to available
+                tvAvailabilityStatus.setText("Available");
+                tvAvailabilityStatus.setTextColor(getResources().getColor(R.color.green));
+                switchAvailability.setChecked(true);
+                switchAvailability.setEnabled(true);
+                Toast.makeText(this, "Ride completed successfully!", Toast.LENGTH_LONG).show();
+                break;
+            case "cancelled":
+                hasActiveRide = false;
+                activeRideRequest = null;
+                firebaseService.updateDriverStatus(currentDriverId, "available");
+                // Reset UI to available
+                tvAvailabilityStatus.setText("Available");
+                tvAvailabilityStatus.setTextColor(getResources().getColor(R.color.green));
+                switchAvailability.setChecked(true);
+                switchAvailability.setEnabled(true);
+                Toast.makeText(this, "Ride was cancelled.", Toast.LENGTH_LONG).show();
+                break;
         }
     }
 }
