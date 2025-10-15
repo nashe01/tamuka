@@ -310,18 +310,31 @@ public class RideInProgressActivity extends AppCompatActivity implements OnMapRe
         // Complete the ride
         firebaseService.completeRideRequest(rideId)
             .addOnSuccessListener(aVoid -> {
-                Toast.makeText(this, "Ride completed successfully!", Toast.LENGTH_LONG).show();
-                
-                // Navigate back to driver dashboard
-                Intent intent = new Intent(this, DashboardDriverActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                startActivity(intent);
-                finish();
+                // Show completion dialog with ride details
+                showRideCompletionDialog();
             })
             .addOnFailureListener(e -> {
                 Log.e(TAG, "Failed to complete ride", e);
                 Toast.makeText(this, "Failed to complete ride: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             });
+    }
+    
+    private void showRideCompletionDialog() {
+        // Get ride details for the dialog
+        String distance = tvDistance.getText().toString();
+        String duration = tvDuration.getText().toString();
+        String fare = tvFare.getText().toString();
+        
+        // Show completion dialog
+        RideCompletionDialog dialog = new RideCompletionDialog(
+            this, 
+            currentRide, 
+            "driver", 
+            distance, 
+            duration, 
+            fare
+        );
+        dialog.show();
     }
     
     private void updateRideStatusToInProgress() {
