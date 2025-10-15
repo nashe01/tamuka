@@ -88,6 +88,13 @@ public class FirebaseService {
         }
         return instance;
     }
+    
+    /**
+     * Get Realtime Database reference
+     */
+    public DatabaseReference getRealtimeDatabase() {
+        return realtimeDb;
+    }
 
     // ==================== AUTHENTICATION ====================
     
@@ -356,7 +363,7 @@ public class FirebaseService {
     /**
      * Create a new ride request in both Firestore and Realtime Database
      */
-    public Task<Void> createRideRequest(String commuterId, String driverId, 
+    public Task<String> createRideRequest(String commuterId, String driverId, 
                                        RideRequest.LocationData pickup, RideRequest.LocationData destination,
                                        int people, double priceEach) {
         String rideId = firestore.collection("rideRequests").document().getId();
@@ -397,8 +404,15 @@ public class FirebaseService {
                     return liveRideRef.setValue(realtimeData);
                 } else {
                     throw task.getException();
-            }
-        });
+                }
+            })
+            .continueWith(task -> {
+                if (task.isSuccessful()) {
+                    return rideId;
+                } else {
+                    throw task.getException();
+                }
+            });
     }
 
     /**

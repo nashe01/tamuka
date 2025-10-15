@@ -41,6 +41,7 @@
     
     <!-- Neutral Gray Scale -->
     <color name="gray">#9E9E9E</color>          <!-- Standard gray -->
+    <color name="gray_50">#FAFAFA</color>       <!-- Very light gray background -->
     <color name="gray_100">#F5F5F5</color>      <!-- Very light gray background -->
     <color name="gray_200">#EEEEEE</color>      <!-- Light gray border -->
     <color name="gray_300">#E0E0E0</color>      <!-- Medium light gray -->

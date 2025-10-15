@@ -150,6 +150,9 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private com.google.firebase.database.ValueEventListener activeRideListener;
     private boolean hasActiveRide = false;
     
+    // Real-time driver location tracking
+    private com.google.firebase.database.ValueEventListener realTimeLocationListener;
+    
     // Driver tracking for timeout handling
     private String currentRequestedDriverId;
     private List<String> timedOutDriverIds = new ArrayList<>();
@@ -421,6 +424,10 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         // Remove active ride listener
         if (activeRideListener != null) {
             firebaseService.removeRideRequestsListener(activeRideListener);
+        }
+        // Remove real-time location listener
+        if (realTimeLocationListener != null) {
+            firebaseService.getRealtimeDatabase().child("drivers_live").removeEventListener(realTimeLocationListener);
         }
         // Stop timeout timer
         stopTimeoutTimer();
@@ -759,6 +766,9 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                 Toast.makeText(HomeCommuterActivity.this, "Error loading drivers: " + databaseError.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
+        
+        // Start real-time location updates for all available drivers
+        startRealTimeDriverLocationUpdates();
     }
 
     private void displayDriverMarkers() {
@@ -805,6 +815,119 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private void showDriverInfoCard(Driver driver) {
         // This method is now handled by the custom info window adapter
         // The info window will be shown when marker is clicked
+    }
+    
+    /**
+     * Start real-time location updates for all available drivers
+     */
+    private void startRealTimeDriverLocationUpdates() {
+        Log.d("RealTimeLocation", "Starting real-time driver location updates");
+        
+        // Remove existing listener if any
+        if (realTimeLocationListener != null) {
+            firebaseService.getRealtimeDatabase().child("drivers_live").removeEventListener(realTimeLocationListener);
+        }
+        
+        // Listen for real-time location updates from all drivers
+        realTimeLocationListener = new com.google.firebase.database.ValueEventListener() {
+                @Override
+                public void onDataChange(com.google.firebase.database.DataSnapshot dataSnapshot) {
+                    for (com.google.firebase.database.DataSnapshot driverSnapshot : dataSnapshot.getChildren()) {
+                        String driverId = driverSnapshot.getKey();
+                        if (driverId != null) {
+                            // Check if driver is available
+                            String status = driverSnapshot.child("status").getValue(String.class);
+                            if ("available".equals(status)) {
+                                // Get location data
+                                com.google.firebase.database.DataSnapshot locationSnapshot = driverSnapshot.child("location");
+                                if (locationSnapshot.exists()) {
+                                    Double lat = locationSnapshot.child("lat").getValue(Double.class);
+                                    Double lng = locationSnapshot.child("lng").getValue(Double.class);
+                                    Long timestamp = locationSnapshot.child("timestamp").getValue(Long.class);
+                                    
+                                    if (lat != null && lng != null) {
+                                        // Update driver location in real-time
+                                        updateDriverMarkerLocation(driverId, lat, lng, timestamp);
+                                    }
+                                }
+                            } else {
+                                // Driver is not available, remove marker if exists
+                                removeDriverMarker(driverId);
+                            }
+                        }
+                    }
+                }
+                
+                @Override
+                public void onCancelled(com.google.firebase.database.DatabaseError databaseError) {
+                    Log.e("RealTimeLocation", "Error listening for driver location updates: " + databaseError.getMessage());
+                }
+            };
+        
+        firebaseService.getRealtimeDatabase().child("drivers_live").addValueEventListener(realTimeLocationListener);
+    }
+    
+    /**
+     * Stop real-time driver location updates
+     */
+    private void stopRealTimeDriverLocationUpdates() {
+        if (realTimeLocationListener != null) {
+            firebaseService.getRealtimeDatabase().child("drivers_live").removeEventListener(realTimeLocationListener);
+            realTimeLocationListener = null;
+            Log.d("RealTimeLocation", "Stopped real-time driver location updates");
+        }
+    }
+    
+    /**
+     * Update driver marker location in real-time
+     */
+    private void updateDriverMarkerLocation(String driverId, double lat, double lng, Long timestamp) {
+        // Check if timestamp is recent (within last 5 minutes)
+        if (timestamp != null && (System.currentTimeMillis() - timestamp) > 300000) {
+            Log.d("RealTimeLocation", "Skipping stale location update for driver: " + driverId);
+            return;
+        }
+        
+        // Find existing marker for this driver
+        Marker existingMarker = null;
+        for (Marker marker : driverMarkers) {
+            if (marker.getTag() != null && marker.getTag() instanceof Driver) {
+                Driver driver = (Driver) marker.getTag();
+                if (driverId.equals(driver.driverId)) {
+                    existingMarker = marker;
+                    break;
+                }
+            }
+        }
+        
+        if (existingMarker != null) {
+            // Update existing marker position
+            LatLng newLocation = new LatLng(lat, lng);
+            existingMarker.setPosition(newLocation);
+            
+            // Update driver object location
+            Driver driver = (Driver) existingMarker.getTag();
+            if (driver != null) {
+                driver.currentLocation = new Driver.LocationData(lat, lng, "Current Location");
+            }
+            
+            Log.d("RealTimeLocation", "Updated marker position for driver: " + driverId + " to " + lat + ", " + lng);
+        } else {
+            // Create new marker if driver is available but marker doesn't exist
+            // This handles cases where driver becomes available after initial load
+            firebaseService.getDriverDetails(driverId)
+                .addOnSuccessListener(driver -> {
+                    if (driver != null && "available".equals(driver.status)) {
+                        driver.currentLocation = new Driver.LocationData(lat, lng, "Current Location");
+                        availableDrivers.add(driver);
+                        displayDriverMarkers();
+                        Log.d("RealTimeLocation", "Created new marker for driver: " + driverId);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("RealTimeLocation", "Failed to get driver details for " + driverId, e);
+                });
+        }
     }
     
     /**
@@ -932,12 +1055,12 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                     destination,
                     numberOfPeople,
                     pricePerPerson
-                ).addOnSuccessListener(aVoid -> {
-                    Log.d("RideRequest", "Ride request created successfully");
+                ).addOnSuccessListener(rideId -> {
+                    Log.d("RideRequest", "Ride request created successfully with ID: " + rideId);
                     
-                    // Create a temporary active ride request for the timer FIRST
+                    // Create active ride request with the actual ride ID from Firebase
                     activeRideRequest = new RideRequest();
-                    activeRideRequest.rideId = "ride_" + System.currentTimeMillis();
+                    activeRideRequest.rideId = rideId;
                     activeRideRequest.status = "pending";
                     activeRideRequest.commuterId = commuterId;
                     activeRideRequest.driverId = driver.driverId;
@@ -975,22 +1098,50 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     }
 
     private void showWaitingScreen(String rideId) {
+        Log.d("RideRequest", "Setting up listener for ride ID: " + rideId);
         // Listen for ride request status updates from Realtime Database
         firebaseService.listenRideRequest(rideId, new com.google.firebase.database.ValueEventListener() {
             @Override
             public void onDataChange(com.google.firebase.database.DataSnapshot dataSnapshot) {
+                Log.d("RideRequest", "Listener received data change for ride: " + rideId);
                 if (dataSnapshot.exists()) {
                     String status = dataSnapshot.child("status").getValue(String.class);
+                    Log.d("RideRequest", "Status changed to: " + status);
                     if (status != null) {
                         switch (status) {
                             case "accepted":
+                                Log.d("RideStatus", "Ride accepted - stopping timer and navigating to progress screen");
                                 Toast.makeText(HomeCommuterActivity.this, "Ride accepted! Driver is on the way.", Toast.LENGTH_LONG).show();
                                 // Update active ride state
                                 hasActiveRide = true;
+                                // Stop real-time driver location updates since ride is accepted
+                                stopRealTimeDriverLocationUpdates();
+                                
+                                // Stop the countdown timer and hide the countdown card
+                                stopTimeoutTimer();
+                                hideRideRequestSentCard();
+                                
                                 // Navigate to ride in progress screen
                                 Intent intent = new Intent(HomeCommuterActivity.this, CommuterRideProgressActivity.class);
                                 intent.putExtra("rideId", activeRideRequest.rideId);
+                                intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                                 startActivity(intent);
+                                break;
+                            case "in_progress":
+                                Log.d("RideStatus", "Ride in progress - stopping timer and navigating to progress screen");
+                                Toast.makeText(HomeCommuterActivity.this, "Ride in progress! You can track your journey.", Toast.LENGTH_LONG).show();
+                                // Update active ride state
+                                hasActiveRide = true;
+                                
+                                // Stop the countdown timer and hide the countdown card
+                                stopTimeoutTimer();
+                                hideRideRequestSentCard();
+                                
+                                // Navigate to ride in progress screen
+                                Intent inProgressIntent = new Intent(HomeCommuterActivity.this, CommuterRideProgressActivity.class);
+                                inProgressIntent.putExtra("rideId", activeRideRequest.rideId);
+                                inProgressIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                                startActivity(inProgressIntent);
                                 break;
                             case "declined":
                                 Toast.makeText(HomeCommuterActivity.this, "Ride declined. Looking for another driver...", Toast.LENGTH_LONG).show();
@@ -1005,6 +1156,8 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                                 // Reset active ride state
                                 hasActiveRide = false;
                                 activeRideRequest = null;
+                                // Restart real-time driver location updates
+                                startRealTimeDriverLocationUpdates();
                                 break;
                             case "cancelled":
                                 Toast.makeText(HomeCommuterActivity.this, "Ride cancelled.", Toast.LENGTH_LONG).show();
@@ -1013,6 +1166,8 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                                 activeRideRequest = null;
                                 // Stop timeout timer
                                 stopTimeoutTimer();
+                                // Restart real-time driver location updates
+                                startRealTimeDriverLocationUpdates();
                                 break;
                             case "timeout":
                                 Toast.makeText(HomeCommuterActivity.this, "Ride request timed out. No driver accepted within 2 minutes.", Toast.LENGTH_LONG).show();
@@ -1021,7 +1176,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                                 activeRideRequest = null;
                                 // Stop timeout timer
                                 stopTimeoutTimer();
-                                // Show nearby drivers again
+                                // Show nearby drivers again and restart real-time updates
                                 showNearbyDrivers();
                                 break;
                         }
@@ -1792,6 +1947,11 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                 case "in_progress":
                     // Show in progress message and disable new requests
                     Toast.makeText(this, "Ride in progress. Please complete this ride first.", Toast.LENGTH_LONG).show();
+                    // Navigate to ride progress screen for in_progress rides
+                    Intent intent = new Intent(this, CommuterRideProgressActivity.class);
+                    intent.putExtra("rideId", ride.rideId);
+                    intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    startActivity(intent);
                     break;
                 case "completed":
                     Toast.makeText(this, "Ride completed successfully!", Toast.LENGTH_SHORT).show();
@@ -1964,6 +2124,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
      * Stop the timeout timer
      */
     private void stopTimeoutTimer() {
+        Log.d("Timeout", "Stopping timeout timer - timeoutRunnable: " + (timeoutRunnable != null) + ", countdownRunnable: " + (countdownRunnable != null));
         if (timeoutRunnable != null) {
             timeoutHandler.removeCallbacks(timeoutRunnable);
             timeoutRunnable = null;
@@ -1974,7 +2135,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         }
         // Reset countdown seconds
         countdownSeconds = 120;
-        Log.d("Timeout", "Timeout timer and countdown stopped");
+        Log.d("Timeout", "Timeout timer and countdown stopped successfully");
     }
 
     /**
@@ -1983,7 +2144,11 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private void triggerRideTimeout() {
         Log.d("Timeout", "Triggering ride timeout");
         
-        if (activeRideRequest != null && activeRideRequest.rideId != null) {
+        if (activeRideRequest != null
+
+
+
+                && activeRideRequest.rideId != null) {
             // Timeout the ride request
             firebaseService.timeoutRideRequest(activeRideRequest.rideId)
                 .addOnSuccessListener(aVoid -> {
