@@ -22,6 +22,40 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <!-- Map Loading Overlay -->
+    <LinearLayout
+        android:id="@+id/mapLoadingOverlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="@color/white"
+        android:visibility="visible"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Loading Progress Bar -->
+        <ProgressBar
+            android:id="@+id/mapLoadingProgress"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginBottom="16dp"
+            android:indeterminateTint="@color/purple_500" />
+
+        <!-- Loading Text -->
+        <TextView
+            android:id="@+id/mapLoadingText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Loading map..."
+            android:textColor="@color/purple_500"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
     <!-- Top Bar Container -->
     <LinearLayout
         android:id="@+id/topBar"
@@ -150,9 +184,10 @@
                     android:orientation="vertical">
 
                     <TextView
+                        android:id="@+id/tvCommuterName"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="New Ride Request"
+                        android:text="John Doe"
                         android:textSize="20sp"
                         android:textStyle="bold"
                         android:textColor="@color/black" />
@@ -185,93 +220,122 @@
 
             </LinearLayout>
 
-            <!-- Location Details -->
+            <!-- Ride Details -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginBottom="20dp">
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="16dp"
+                android:background="@drawable/ride_details_bg"
+                android:padding="12dp">
 
-                <!-- Pickup Location -->
+                <!-- People Count -->
                 <LinearLayout
-                    android:layout_width="match_parent"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="12dp">
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center">
 
-                    <View
-                        android:layout_width="12dp"
-                        android:layout_height="12dp"
-                        android:layout_marginEnd="12dp"
-                        android:background="@drawable/pickup_dot_bg" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
+                        android:text="People"
+                        android:textSize="12sp"
+                        android:textColor="@color/gray_600" />
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Pickup"
-                            android:textSize="12sp"
-                            android:textColor="@color/gray_600" />
-
-                        <TextView
-                            android:id="@+id/tvPickupLocation"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="123 Main Street"
-                            android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/black" />
-
-                    </LinearLayout>
+                    <TextView
+                        android:id="@+id/tvPeopleCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="2"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/black" />
 
                 </LinearLayout>
 
-                <!-- Destination Location -->
+                <!-- Price Per Person -->
                 <LinearLayout
-                    android:layout_width="match_parent"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center">
 
-                    <View
-                        android:layout_width="12dp"
-                        android:layout_height="12dp"
-                        android:layout_marginEnd="12dp"
-                        android:background="@drawable/destination_dot_bg" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
+                        android:text="Price Each"
+                        android:textSize="12sp"
+                        android:textColor="@color/gray_600" />
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Destination"
-                            android:textSize="12sp"
-                            android:textColor="@color/gray_600" />
+                    <TextView
+                        android:id="@+id/tvPriceEach"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="$5.50"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/black" />
 
-                        <TextView
-                            android:id="@+id/tvDestinationLocation"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="456 Oak Avenue"
-                            android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/black" />
+                </LinearLayout>
 
-                    </LinearLayout>
+                <!-- Distance to Commuter -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Pickup"
+                        android:textSize="12sp"
+                        android:textColor="@color/gray_600" />
+
+                    <TextView
+                        android:id="@+id/tvDistanceToCommuter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="2.3 km"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/black" />
+
+                </LinearLayout>
+
+                <!-- Distance to Destination -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Destination"
+                        android:textSize="12sp"
+                        android:textColor="@color/gray_600" />
+
+                    <TextView
+                        android:id="@+id/tvDistanceToDestination"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="5.2 km"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/black" />
 
                 </LinearLayout>
 
             </LinearLayout>
+
 
             <!-- Action Buttons -->
             <LinearLayout
@@ -304,7 +368,7 @@
                     android:textColor="@color/white"
                     android:textSize="16sp"
                     android:textStyle="bold"
-                    app:backgroundTint="@color/green"
+                    app:backgroundTint="@color/primary"
                     app:cornerRadius="12dp"
                     app:rippleColor="@color/primary_dark" />
 
@@ -313,6 +377,7 @@
         </LinearLayout>
 
     </androidx.cardview.widget.CardView>
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>
 

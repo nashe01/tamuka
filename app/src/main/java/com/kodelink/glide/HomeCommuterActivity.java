@@ -11,13 +11,14 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.RatingBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -28,8 +29,6 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.core.view.GravityCompat;
-import androidx.drawerlayout.widget.DrawerLayout;
 
 // Google Play Services imports for location and maps
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -56,7 +55,6 @@ import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRe
 import com.google.android.libraries.places.api.net.PlacesClient;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
-import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.auth.FirebaseAuth;
@@ -104,7 +102,7 @@ import org.json.JSONObject;
  * @author Swift Ride Development Team
  * @version 1.0
  */
-public class HomeCommuterActivity extends AppCompatActivity implements OnMapReadyCallback, NavigationView.OnNavigationItemSelectedListener, GoogleMap.OnMapLongClickListener {
+public class HomeCommuterActivity extends AppCompatActivity implements OnMapReadyCallback, GoogleMap.OnMapLongClickListener {
 
     // Permission request code for location access
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
@@ -113,12 +111,16 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private MapView mapView;                    // Map view container
     private GoogleMap googleMap;                // Google Maps instance
     private FusedLocationProviderClient fusedLocationClient;  // Location services client
+    
+    // Map loading state
+    private LinearLayout mapLoadingOverlay;     // Loading overlay
+    private ProgressBar mapLoadingProgress;    // Loading progress bar
+    private TextView mapLoadingText;           // Loading text
+    private boolean isMapLoaded = false;       // Map loading state
     // UI components for navigation and search
-    private ImageButton btnMenu;                // Menu button to open navigation drawer
+    private ImageButton btnLogout;              // Logout button
     private TextInputEditText etSearch;         // Search input field for destinations
     private TextInputLayout searchLayout;       // Search input layout container
-    private DrawerLayout drawerLayout;          // Navigation drawer layout
-    private NavigationView navigationView;      // Navigation drawer view
     // Shared preferences for storing user data
     private SharedPreferences prefs;
     
@@ -143,6 +145,23 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private Driver selectedDriver;
     private CustomInfoWindowAdapter infoWindowAdapter;
     
+    // Active ride tracking
+    private RideRequest activeRideRequest;
+    private com.google.firebase.database.ValueEventListener activeRideListener;
+    private boolean hasActiveRide = false;
+    
+    // Driver tracking for timeout handling
+    private String currentRequestedDriverId;
+    private List<String> timedOutDriverIds = new ArrayList<>();
+    
+    // Timeout handling
+    private android.os.Handler timeoutHandler;
+    private Runnable timeoutRunnable;
+    private Runnable countdownRunnable;
+    private long rideRequestStartTime;
+    private static final long TIMEOUT_DURATION = 2 * 60 * 1000; // 2 minutes in milliseconds
+    private int countdownSeconds = 120; // 2 minutes in seconds
+    
     // Driver selection card variables
     private View driverSelectionCard;
     private TextView tvDriverName;
@@ -162,6 +181,8 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     // Ride request sent card variables
     private View rideRequestSentCard;
     private TextView tvDriverNameSent;
+    private TextView tvStatusMessage;
+    private TextView tvCountdownTimer;
     private Button btnCancelRequest;
     private Animation fadeInAnimation;
     private Animation fadeOutAnimation;
@@ -173,12 +194,15 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
 
         // Initialize views
         mapView = findViewById(R.id.mapView);
-        btnMenu = findViewById(R.id.btnMenu);
+        btnLogout = findViewById(R.id.btnLogout);
         etSearch = findViewById(R.id.etSearch);
         searchLayout = findViewById(R.id.searchLayout);
         rvSuggestions = findViewById(R.id.rvSuggestions);
-        drawerLayout = findViewById(R.id.drawerLayout);
-        navigationView = findViewById(R.id.navigationView);
+        
+        // Initialize map loading overlay
+        mapLoadingOverlay = findViewById(R.id.mapLoadingOverlay);
+        mapLoadingProgress = findViewById(R.id.mapLoadingProgress);
+        mapLoadingText = findViewById(R.id.mapLoadingText);
         
         // Initialize driver selection card
         initializeDriverSelectionCard();
@@ -192,6 +216,9 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
 
         // Initialize Firebase service
         firebaseService = FirebaseService.getInstance();
+        
+        // Initialize timeout handler
+        timeoutHandler = new android.os.Handler();
         
         // Initialize Places API
         initializePlacesAPI();
@@ -212,19 +239,17 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         mapView.onCreate(savedInstanceState);
         mapView.getMapAsync(this);
 
-        // Set up navigation drawer
-        navigationView.setNavigationItemSelectedListener(this);
-        
         // Set up button listeners
-        btnMenu.setOnClickListener(v -> {
-            drawerLayout.openDrawer(GravityCompat.START);
+        btnLogout.setOnClickListener(v -> {
+            showLogoutConfirmationDialog();
         });
 
         // Set up search functionality
         setupSearchFunctionality();
 
-        // Update header with user role
-        updateNavigationHeader();
+
+        // Check for active rides
+        checkForActiveRides();
 
         // Request location permission
         requestLocationPermission();
@@ -262,6 +287,23 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         googleMap.setOnMapClickListener(latLng -> {
             hideSuggestions();
             hideDriverSelectionCard();
+        });
+        
+        // Set up map camera change listener to detect when tiles are loaded
+        googleMap.setOnCameraMoveListener(() -> {
+            if (!isMapLoaded) {
+                // Map is starting to load, update loading text
+                mapLoadingText.setText("Loading map tiles...");
+            }
+        });
+        
+        // Set up map camera idle listener to detect when map is fully loaded
+        googleMap.setOnCameraIdleListener(() -> {
+            if (!isMapLoaded) {
+                // Map tiles are loaded, hide loading overlay
+                hideMapLoadingOverlay();
+                isMapLoaded = true;
+            }
         });
     }
 
@@ -376,6 +418,12 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     protected void onDestroy() {
         super.onDestroy();
         mapView.onDestroy();
+        // Remove active ride listener
+        if (activeRideListener != null) {
+            firebaseService.removeRideRequestsListener(activeRideListener);
+        }
+        // Stop timeout timer
+        stopTimeoutTimer();
     }
 
     @Override
@@ -384,81 +432,40 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         mapView.onLowMemory();
     }
 
-    @Override
-    public boolean onNavigationItemSelected(@NonNull MenuItem item) {
-        int id = item.getItemId();
+
+
+    private void showLogoutConfirmationDialog() {
+        android.app.Dialog dialog = new android.app.Dialog(this);
+        android.view.LayoutInflater inflater = getLayoutInflater();
+        android.view.View dialogView = inflater.inflate(R.layout.custom_logout_dialog, null);
         
-        if (id == R.id.nav_home) {
-            // Already on home screen, just close drawer
-            Toast.makeText(this, "You're already on the home screen", Toast.LENGTH_SHORT).show();
-        } else if (id == R.id.nav_ride_history) {
-            Intent intent = new Intent(this, RideHistoryActivity.class);
-            startActivity(intent);
-        } else if (id == R.id.nav_notifications) {
-            Toast.makeText(this, "Notifications clicked", Toast.LENGTH_SHORT).show();
-        } else if (id == R.id.nav_settings) {
-            Toast.makeText(this, "Settings clicked", Toast.LENGTH_SHORT).show();
-        } else if (id == R.id.nav_logout) {
+        dialog.setContentView(dialogView);
+        
+        // Set up button listeners
+        android.widget.Button btnCancel = dialogView.findViewById(R.id.btnCancel);
+        android.widget.Button btnConfirm = dialogView.findViewById(R.id.btnConfirm);
+        
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+        btnConfirm.setOnClickListener(v -> {
+            dialog.dismiss();
             logout();
+        });
+        
+        // Set window properties to respect custom width
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+            dialog.getWindow().setLayout(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
         }
         
-        drawerLayout.closeDrawer(GravityCompat.START);
-        return true;
+        dialog.show();
     }
 
-    private void updateNavigationHeader() {
-        String currentUserPhone = prefs.getString("current_user_phone", "");
-        String role = prefs.getString(currentUserPhone + "_role", "commuter");
-        
-        TextView tvUserRole = navigationView.getHeaderView(0).findViewById(R.id.tvUserRole);
-        if (tvUserRole != null) {
-            tvUserRole.setText(role.equals("driver") ? "Driver" : "Commuter");
-        }
-        
-        // Update user name from database
-        TextView tvUserName = navigationView.getHeaderView(0).findViewById(R.id.tvUserName);
-        if (tvUserName != null) {
-            // Get current user's entity ID from database
-            firebaseService.getCurrentUserEntityId()
-                .addOnSuccessListener(entityId -> {
-                    if (entityId != null) {
-                        if (role.equals("driver")) {
-                            // Fetch driver name from database
-                            firebaseService.getDriverDetails(entityId)
-                                .addOnSuccessListener(driver -> {
-                                    if (driver != null && driver.name != null) {
-                                        tvUserName.setText(driver.name);
-                                    } else {
-                                        tvUserName.setText("Driver");
-                                    }
-                                })
-                                .addOnFailureListener(e -> {
-                                    Log.e("NavigationHeader", "Failed to get driver details", e);
-                                    tvUserName.setText("Driver");
-                                });
-                        } else {
-                            // Fetch commuter name from database
-                            firebaseService.getCommuterDetails(entityId)
-                                .addOnSuccessListener(commuter -> {
-                                    if (commuter != null && commuter.name != null) {
-                                        tvUserName.setText(commuter.name);
-                                    } else {
-                                        tvUserName.setText("Commuter");
-                                    }
-                                })
-                                .addOnFailureListener(e -> {
-                                    Log.e("NavigationHeader", "Failed to get commuter details", e);
-                                    tvUserName.setText("Commuter");
-                                });
-                        }
-                    } else {
-                        tvUserName.setText("User");
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    Log.e("NavigationHeader", "Failed to get current user entity ID", e);
-                    tvUserName.setText("User");
-                });
+    private void hideMapLoadingOverlay() {
+        if (mapLoadingOverlay != null) {
+            mapLoadingOverlay.animate()
+                    .alpha(0f)
+                    .setDuration(300)
+                    .withEndAction(() -> mapLoadingOverlay.setVisibility(View.GONE));
         }
     }
 
@@ -722,6 +729,8 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         driverMarkers.clear();
         availableDrivers.clear();
         
+        Log.d("DriverFilter", "Showing nearby drivers, excluding timed out drivers: " + timedOutDriverIds);
+        
         // Listen for available drivers from Realtime Database
         firebaseService.listenAvailableDrivers(new com.google.firebase.database.ValueEventListener() {
             @Override
@@ -754,6 +763,12 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
 
     private void displayDriverMarkers() {
         for (Driver driver : availableDrivers) {
+            // Skip drivers that have timed out
+            if (timedOutDriverIds.contains(driver.driverId)) {
+                Log.d("DriverFilter", "Skipping timed out driver: " + driver.driverId);
+                continue;
+            }
+            
             if (driver.currentLocation != null) {
                 LatLng driverLocation = new LatLng(driver.currentLocation.lat, driver.currentLocation.lng);
                 Marker driverMarker = googleMap.addMarker(new MarkerOptions()
@@ -769,6 +784,24 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         }
     }
 
+    /**
+     * Remove a specific driver's marker from the map
+     */
+    private void removeDriverMarker(String driverId) {
+        for (int i = driverMarkers.size() - 1; i >= 0; i--) {
+            Marker marker = driverMarkers.get(i);
+            if (marker.getTag() != null && marker.getTag() instanceof Driver) {
+                Driver driver = (Driver) marker.getTag();
+                if (driverId.equals(driver.driverId)) {
+                    marker.remove();
+                    driverMarkers.remove(i);
+                    Log.d("DriverMarker", "Removed marker for driver: " + driverId);
+                    break;
+                }
+            }
+        }
+    }
+
     private void showDriverInfoCard(Driver driver) {
         // This method is now handled by the custom info window adapter
         // The info window will be shown when marker is clicked
@@ -778,6 +811,30 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
      * Handle Request Ride button click from custom info window
      */
     private void onRequestRide(Driver driver) {
+        // Check if commuter already has an active ride
+        if (hasActiveRide) {
+            String statusMessage = "You already have an active ride request";
+            if (activeRideRequest != null) {
+                switch (activeRideRequest.status) {
+                    case "pending":
+                        statusMessage = "You have a pending ride request. Please wait for driver response or cancel it first.";
+                        break;
+                    case "accepted":
+                        statusMessage = "Your ride has been accepted and is in progress. Please complete this ride before requesting another.";
+                        break;
+                    case "in_progress":
+                        statusMessage = "You have a ride in progress. Please complete this ride before requesting another.";
+                        break;
+                }
+            }
+            Toast.makeText(this, statusMessage, Toast.LENGTH_LONG).show();
+            return;
+        }
+        
+        // Clear timed out drivers list when starting a new request
+        timedOutDriverIds.clear();
+        Log.d("DriverFilter", "Cleared timed out drivers list for new request");
+        
         // Show immediate feedback that button was pressed
         Toast.makeText(this, "Button pressed! Processing request...", Toast.LENGTH_SHORT).show();
         
@@ -877,9 +934,28 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                     pricePerPerson
                 ).addOnSuccessListener(aVoid -> {
                     Log.d("RideRequest", "Ride request created successfully");
+                    
+                    // Create a temporary active ride request for the timer FIRST
+                    activeRideRequest = new RideRequest();
+                    activeRideRequest.rideId = "ride_" + System.currentTimeMillis();
+                    activeRideRequest.status = "pending";
+                    activeRideRequest.commuterId = commuterId;
+                    activeRideRequest.driverId = driver.driverId;
+                    
+                    // Track the current requested driver
+                    currentRequestedDriverId = driver.driverId;
+                    
+                    Log.d("RideRequest", "Active ride request created: " + activeRideRequest.rideId + ", status: " + activeRideRequest.status);
+                    
+                    // Set active ride state
+                    hasActiveRide = true;
+                    
+                    // Start timeout timer
+                    startTimeoutTimer();
+                    
+                    // Show UI
                     showRideRequestSentMessage(driver.name);
-                    // Note: We'll need to get the rideId from the response or generate it consistently
-                    showWaitingScreen("ride_" + System.currentTimeMillis());
+                    showWaitingScreen(activeRideRequest.rideId);
                 }).addOnFailureListener(e -> {
                     Log.e("RideRequest", "Failed to create ride request", e);
                     Toast.makeText(HomeCommuterActivity.this, "Failed to send ride request: " + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -909,15 +985,51 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                         switch (status) {
                             case "accepted":
                                 Toast.makeText(HomeCommuterActivity.this, "Ride accepted! Driver is on the way.", Toast.LENGTH_LONG).show();
-                                // Here you would navigate to ride tracking screen
+                                // Update active ride state
+                                hasActiveRide = true;
+                                // Navigate to ride in progress screen
+                                Intent intent = new Intent(HomeCommuterActivity.this, CommuterRideProgressActivity.class);
+                                intent.putExtra("rideId", activeRideRequest.rideId);
+                                startActivity(intent);
                                 break;
                             case "declined":
                                 Toast.makeText(HomeCommuterActivity.this, "Ride declined. Looking for another driver...", Toast.LENGTH_LONG).show();
+                                // Reset active ride state
+                                hasActiveRide = false;
+                                activeRideRequest = null;
                                 // Remove declined driver from available list and show others
+                                showNearbyDrivers();
+                                break;
+                            case "completed":
+                                Toast.makeText(HomeCommuterActivity.this, "Ride completed successfully!", Toast.LENGTH_LONG).show();
+                                // Reset active ride state
+                                hasActiveRide = false;
+                                activeRideRequest = null;
+                                break;
+                            case "cancelled":
+                                Toast.makeText(HomeCommuterActivity.this, "Ride cancelled.", Toast.LENGTH_LONG).show();
+                                // Reset active ride state
+                                hasActiveRide = false;
+                                activeRideRequest = null;
+                                // Stop timeout timer
+                                stopTimeoutTimer();
+                                break;
+                            case "timeout":
+                                Toast.makeText(HomeCommuterActivity.this, "Ride request timed out. No driver accepted within 2 minutes.", Toast.LENGTH_LONG).show();
+                                // Reset active ride state
+                                hasActiveRide = false;
+                                activeRideRequest = null;
+                                // Stop timeout timer
+                                stopTimeoutTimer();
+                                // Show nearby drivers again
                                 showNearbyDrivers();
                                 break;
                         }
                     }
+                } else {
+                    // Ride request no longer exists (completed/cancelled)
+                    hasActiveRide = false;
+                    activeRideRequest = null;
                 }
             }
             
@@ -1407,6 +1519,17 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         etNumberOfPeople.setText("1");
         etPricePerPerson.setText("5.00");
         
+        // Update button state based on active ride status
+        if (hasActiveRide) {
+            btnRequestRide.setEnabled(false);
+            btnRequestRide.setText("Active Ride in Progress");
+            btnRequestRide.setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
+        } else {
+            btnRequestRide.setEnabled(true);
+            btnRequestRide.setText("Request Ride");
+            btnRequestRide.setBackgroundColor(getResources().getColor(R.color.purple_500));
+        }
+        
         // Show card with animation
         driverSelectionCard.setVisibility(View.VISIBLE);
         driverSelectionCard.startAnimation(slideUpAnimation);
@@ -1441,6 +1564,8 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         
         // Initialize card views
         tvDriverNameSent = rideRequestSentCard.findViewById(R.id.tvDriverNameSent);
+        tvStatusMessage = rideRequestSentCard.findViewById(R.id.tvStatusMessage);
+        tvCountdownTimer = rideRequestSentCard.findViewById(R.id.tvCountdownTimer);
         btnCancelRequest = rideRequestSentCard.findViewById(R.id.btnCancelRequest);
         
         // Initialize animations
@@ -1449,8 +1574,16 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         
         // Set up button listener
         btnCancelRequest.setOnClickListener(v -> {
-            hideRideRequestSentCard();
-            // TODO: Implement cancel ride request functionality
+            String buttonText = btnCancelRequest.getText().toString();
+            if ("OK".equals(buttonText)) {
+                // OK button clicked - hide card and show drivers
+                hideRideRequestSentCard();
+                showNearbyDrivers();
+            } else {
+                // Cancel button clicked - cancel the ride request
+                cancelActiveRideRequest();
+                hideRideRequestSentCard();
+            }
         });
         
         // Set up fade out animation listener
@@ -1475,13 +1608,36 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
      * Show the ride request sent card with fade in animation
      */
     private void showRideRequestSentCard(String driverName) {
+        Log.d("RideRequestCard", "Showing ride request sent card for driver: " + driverName);
         if (driverName != null) {
             tvDriverNameSent.setText(driverName);
+        }
+        
+        // Set initial status message
+        if (tvStatusMessage != null) {
+            tvStatusMessage.setText("Please wait for the driver to respond...");
+            tvStatusMessage.setTextColor(getResources().getColor(R.color.gray_600));
+        }
+        
+        // Reset button to Cancel Request
+        if (btnCancelRequest != null) {
+            btnCancelRequest.setText("Cancel Request");
+            btnCancelRequest.setBackgroundColor(getResources().getColor(R.color.purple_500));
+        }
+        
+        // Initialize countdown timer display
+        if (tvCountdownTimer != null) {
+            tvCountdownTimer.setText("2:00");
+            tvCountdownTimer.setTextColor(getResources().getColor(R.color.purple_500));
+            Log.d("RideRequestCard", "Countdown timer initialized");
+        } else {
+            Log.e("RideRequestCard", "Countdown timer TextView is null!");
         }
         
         // Show card with animation
         rideRequestSentCard.setVisibility(View.VISIBLE);
         rideRequestSentCard.startAnimation(fadeInAnimation);
+        Log.d("RideRequestCard", "Card made visible and animation started");
     }
     
     /**
@@ -1492,4 +1648,410 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
             rideRequestSentCard.startAnimation(fadeOutAnimation);
         }
     }
+
+    /**
+     * Check if commuter has any active ride requests
+     */
+    private void checkForActiveRides() {
+        firebaseService.getCurrentUserEntityId()
+            .addOnSuccessListener(commuterId -> {
+                if (commuterId != null) {
+                    // Check if commuter has active rides
+                    firebaseService.hasActiveRideRequest(commuterId)
+                        .addOnSuccessListener(hasActive -> {
+                            if (hasActive) {
+                                // Get the active ride details
+                                firebaseService.getActiveRideRequest(commuterId)
+                                    .addOnSuccessListener(activeRide -> {
+                                        if (activeRide != null) {
+                                            activeRideRequest = activeRide;
+                                            hasActiveRide = true;
+                                            
+                                            // Show appropriate message based on status
+                                            String message = "You have an active ride request";
+                                            switch (activeRide.status) {
+                                                case "pending":
+                                                    message = "You have a pending ride request. Please wait for driver response.";
+                                                    break;
+                                                case "accepted":
+                                                    message = "Your ride has been accepted and is in progress.";
+                                                    break;
+                                                case "in_progress":
+                                                    message = "You have a ride in progress.";
+                                                    break;
+                                            }
+                                            Toast.makeText(HomeCommuterActivity.this, message, Toast.LENGTH_LONG).show();
+                                            
+                                            // Set up listener for active ride updates
+                                            setupActiveRideListener(commuterId);
+                                        }
+                                    })
+                                    .addOnFailureListener(e -> {
+                                        Log.e("ActiveRide", "Failed to get active ride details", e);
+                                    });
+                            } else {
+                                hasActiveRide = false;
+                                activeRideRequest = null;
+                            }
+                        })
+                        .addOnFailureListener(e -> {
+                            Log.e("ActiveRide", "Failed to check for active rides", e);
+                        });
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e("ActiveRide", "Failed to get current user entity ID", e);
+            });
+    }
+
+    /**
+     * Set up listener for active ride updates
+     */
+    private void setupActiveRideListener(String commuterId) {
+        activeRideListener = new com.google.firebase.database.ValueEventListener() {
+            @Override
+            public void onDataChange(com.google.firebase.database.DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    // Parse the active ride from snapshot
+                    RideRequest ride = parseRideRequestFromSnapshot(dataSnapshot);
+                    if (ride != null) {
+                        activeRideRequest = ride;
+                        hasActiveRide = true;
+                        
+                        // Update UI based on status
+                        updateUIForActiveRide(ride);
+                    }
+                } else {
+                    // No active ride
+                    hasActiveRide = false;
+                    activeRideRequest = null;
+                }
+            }
+            
+            @Override
+            public void onCancelled(com.google.firebase.database.DatabaseError databaseError) {
+                Log.e("ActiveRide", "Error listening to active ride: " + databaseError.getMessage());
+            }
+        };
+        
+        firebaseService.listenActiveRideRequest(commuterId, activeRideListener);
+    }
+
+    /**
+     * Parse RideRequest from Realtime Database snapshot
+     */
+    private RideRequest parseRideRequestFromSnapshot(com.google.firebase.database.DataSnapshot snapshot) {
+        try {
+            RideRequest ride = new RideRequest();
+            ride.rideId = snapshot.child("rideId").getValue(String.class);
+            ride.commuterId = snapshot.child("commuterId").getValue(String.class);
+            ride.driverId = snapshot.child("driverId").getValue(String.class);
+            ride.status = snapshot.child("status").getValue(String.class);
+            ride.people = snapshot.child("people").getValue(Integer.class);
+            ride.priceEach = snapshot.child("priceEach").getValue(Double.class);
+            ride.timestamp = snapshot.child("timestamp").getValue(Long.class);
+            
+            // Parse location data
+            com.google.firebase.database.DataSnapshot pickupSnapshot = snapshot.child("pickupLocation");
+            if (pickupSnapshot.exists()) {
+                ride.pickupLocation = new RideRequest.LocationData();
+                ride.pickupLocation.lat = pickupSnapshot.child("lat").getValue(Double.class);
+                ride.pickupLocation.lng = pickupSnapshot.child("lng").getValue(Double.class);
+                ride.pickupLocation.address = pickupSnapshot.child("address").getValue(String.class);
+            }
+            
+            com.google.firebase.database.DataSnapshot destSnapshot = snapshot.child("destination");
+            if (destSnapshot.exists()) {
+                ride.destination = new RideRequest.LocationData();
+                ride.destination.lat = destSnapshot.child("lat").getValue(Double.class);
+                ride.destination.lng = destSnapshot.child("lng").getValue(Double.class);
+                ride.destination.address = destSnapshot.child("address").getValue(String.class);
+            }
+            
+            return ride;
+        } catch (Exception e) {
+            Log.e("ParseRide", "Error parsing ride request from snapshot", e);
+            return null;
+        }
+    }
+
+    /**
+     * Update UI based on active ride status
+     */
+    private void updateUIForActiveRide(RideRequest ride) {
+        if (ride != null) {
+            switch (ride.status) {
+                case "pending":
+                    // Show pending message and allow cancellation
+                    Toast.makeText(this, "Ride request pending. You can cancel it if needed.", Toast.LENGTH_SHORT).show();
+                    break;
+                case "accepted":
+                    // Show accepted message and disable new requests
+                    Toast.makeText(this, "Ride accepted! Driver is on the way.", Toast.LENGTH_LONG).show();
+                    break;
+                case "in_progress":
+                    // Show in progress message and disable new requests
+                    Toast.makeText(this, "Ride in progress. Please complete this ride first.", Toast.LENGTH_LONG).show();
+                    break;
+                case "completed":
+                    Toast.makeText(this, "Ride completed successfully!", Toast.LENGTH_SHORT).show();
+                    // Reset active ride state
+                    hasActiveRide = false;
+                    activeRideRequest = null;
+                    break;
+                case "declined":
+                    Toast.makeText(this, "Ride declined by driver. You can now request another ride.", Toast.LENGTH_LONG).show();
+                    // Reset active ride state
+                    hasActiveRide = false;
+                    activeRideRequest = null;
+                    break;
+                case "cancelled":
+                    Toast.makeText(this, "Ride cancelled successfully.", Toast.LENGTH_SHORT).show();
+                    // Reset active ride state
+                    hasActiveRide = false;
+                    activeRideRequest = null;
+                    stopTimeoutTimer();
+                    break;
+                case "timeout":
+                    Toast.makeText(this, "Ride request timed out. You can now request another ride.", Toast.LENGTH_LONG).show();
+                    // Reset active ride state
+                    hasActiveRide = false;
+                    activeRideRequest = null;
+                    stopTimeoutTimer();
+                    break;
+            }
+        }
+    }
+
+    /**
+     * Cancel the active ride request
+     */
+    private void cancelActiveRideRequest() {
+        if (activeRideRequest != null && activeRideRequest.rideId != null) {
+            // Only allow cancellation if ride is still pending
+            if ("pending".equals(activeRideRequest.status)) {
+                firebaseService.cancelRideRequest(activeRideRequest.rideId)
+                    .addOnSuccessListener(aVoid -> {
+                        Toast.makeText(this, "Ride request cancelled successfully", Toast.LENGTH_SHORT).show();
+                        hasActiveRide = false;
+                        activeRideRequest = null;
+                        stopTimeoutTimer();
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(this, "Failed to cancel ride request: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    });
+            } else {
+                Toast.makeText(this, "Cannot cancel ride request. Ride status: " + activeRideRequest.status, Toast.LENGTH_LONG).show();
+            }
+        } else {
+            Toast.makeText(this, "No active ride request to cancel", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * Start the timeout timer for ride requests
+     */
+    private void startTimeoutTimer() {
+        rideRequestStartTime = System.currentTimeMillis();
+        Log.d("Timeout", "Starting timeout timer at: " + rideRequestStartTime);
+        
+        // Remove any existing timeout runnable
+        if (timeoutRunnable != null) {
+            timeoutHandler.removeCallbacks(timeoutRunnable);
+        }
+        if (countdownRunnable != null) {
+            timeoutHandler.removeCallbacks(countdownRunnable);
+        }
+        
+        // Start countdown display
+        startCountdownDisplay();
+        
+        timeoutRunnable = new Runnable() {
+            @Override
+            public void run() {
+                // Check if ride is still pending after 2 minutes
+                if (activeRideRequest != null && "pending".equals(activeRideRequest.status)) {
+                    Log.d("Timeout", "Ride request timed out after 2 minutes (backup timeout)");
+                    triggerRideTimeout();
+                }
+            }
+        };
+        
+        // Schedule timeout after 2 minutes
+        timeoutHandler.postDelayed(timeoutRunnable, TIMEOUT_DURATION);
+        Log.d("Timeout", "Timeout timer started for 2 minutes");
+    }
+
+    /**
+     * Start countdown display
+     */
+    private void startCountdownDisplay() {
+        Log.d("Countdown", "Starting countdown display");
+        
+        // Reset countdown seconds
+        countdownSeconds = 120; // 2 minutes
+        
+        // Remove any existing countdown runnable first
+        if (countdownRunnable != null) {
+            timeoutHandler.removeCallbacks(countdownRunnable);
+        }
+        
+        countdownRunnable = new Runnable() {
+            @Override
+            public void run() {
+                Log.d("Countdown", "Countdown runnable executing - countdownSeconds: " + countdownSeconds + 
+                      ", activeRideRequest: " + (activeRideRequest != null) + 
+                      ", status: " + (activeRideRequest != null ? activeRideRequest.status : "null") + 
+                      ", tvCountdownTimer: " + (tvCountdownTimer != null));
+                
+                Log.d("Countdown", "Checking conditions - activeRideRequest != null: " + (activeRideRequest != null) + 
+                      ", status equals pending: " + (activeRideRequest != null && "pending".equals(activeRideRequest.status)) + 
+                      ", tvCountdownTimer != null: " + (tvCountdownTimer != null) + 
+                      ", countdownSeconds > 0: " + (countdownSeconds > 0));
+                
+                // Fallback: if activeRideRequest is null but we have an active ride, create it
+                if (activeRideRequest == null && hasActiveRide) {
+                    Log.d("Countdown", "Creating fallback activeRideRequest");
+                    activeRideRequest = new RideRequest();
+                    activeRideRequest.status = "pending";
+                }
+                
+                if (tvCountdownTimer != null && countdownSeconds > 0) {
+                    int minutes = countdownSeconds / 60;
+                    int seconds = countdownSeconds % 60;
+                    
+                    String timeText = String.format("%d:%02d", minutes, seconds);
+                    tvCountdownTimer.setText(timeText);
+                    
+                    Log.d("Countdown", "Updated timer text: " + timeText + " (countdownSeconds: " + countdownSeconds + ")");
+                    
+                    // Change color as time runs out
+                    if (countdownSeconds <= 30) { // Less than 30 seconds
+                        tvCountdownTimer.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
+                    } else if (countdownSeconds <= 60) { // Less than 1 minute
+                        tvCountdownTimer.setTextColor(getResources().getColor(android.R.color.holo_orange_dark));
+                    } else {
+                        tvCountdownTimer.setTextColor(getResources().getColor(R.color.purple_500));
+                    }
+                    
+                    // Decrement counter
+                    countdownSeconds--;
+                    
+                    // Schedule next update in 1 second
+                    timeoutHandler.postDelayed(countdownRunnable, 1000);
+                    Log.d("Countdown", "Scheduled next update in 1 second, new countdownSeconds: " + countdownSeconds);
+                } else {
+                    if (countdownSeconds <= 0) {
+                        tvCountdownTimer.setText("0:00");
+                        tvCountdownTimer.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
+                        Log.d("Countdown", "Timer reached 0:00 - triggering timeout");
+                        
+                        // Trigger timeout when countdown reaches 0
+                        triggerRideTimeout();
+                    } else {
+                        Log.d("Countdown", "Countdown stopped - conditions not met, countdownSeconds: " + countdownSeconds);
+                    }
+                }
+            }
+        };
+        
+        // Start countdown immediately
+        timeoutHandler.post(countdownRunnable);
+        Log.d("Countdown", "Countdown runnable posted to handler");
+    }
+
+    /**
+     * Stop the timeout timer
+     */
+    private void stopTimeoutTimer() {
+        if (timeoutRunnable != null) {
+            timeoutHandler.removeCallbacks(timeoutRunnable);
+            timeoutRunnable = null;
+        }
+        if (countdownRunnable != null) {
+            timeoutHandler.removeCallbacks(countdownRunnable);
+            countdownRunnable = null;
+        }
+        // Reset countdown seconds
+        countdownSeconds = 120;
+        Log.d("Timeout", "Timeout timer and countdown stopped");
+    }
+
+    /**
+     * Trigger ride timeout when countdown reaches 0
+     */
+    private void triggerRideTimeout() {
+        Log.d("Timeout", "Triggering ride timeout");
+        
+        if (activeRideRequest != null && activeRideRequest.rideId != null) {
+            // Timeout the ride request
+            firebaseService.timeoutRideRequest(activeRideRequest.rideId)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d("Timeout", "Ride request timed out successfully");
+                    
+                    // Show timeout message on the card
+                    if (tvStatusMessage != null) {
+                        tvStatusMessage.setText("Driver did not respond. Choose another driver below.");
+                        tvStatusMessage.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
+                    }
+                    
+                    // Change cancel button to OK
+                    if (btnCancelRequest != null) {
+                        btnCancelRequest.setText("OK");
+                        btnCancelRequest.setBackgroundColor(getResources().getColor(R.color.purple_500));
+                    }
+                    
+                    // Show toast message
+                    Toast.makeText(HomeCommuterActivity.this, "Driver did not respond. Please choose another driver.", Toast.LENGTH_LONG).show();
+                    
+                    // Add driver to timed out list and remove their marker
+                    if (currentRequestedDriverId != null) {
+                        timedOutDriverIds.add(currentRequestedDriverId);
+                        removeDriverMarker(currentRequestedDriverId);
+                        Log.d("Timeout", "Removed marker for timed out driver: " + currentRequestedDriverId);
+                    }
+                    
+                    // Reset active ride state
+                    hasActiveRide = false;
+                    activeRideRequest = null;
+                    currentRequestedDriverId = null;
+                    
+                    // Stop the timeout timer
+                    stopTimeoutTimer();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("Timeout", "Failed to timeout ride request", e);
+                    Toast.makeText(HomeCommuterActivity.this, "Failed to timeout ride request: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+        } else {
+            Log.w("Timeout", "No active ride request to timeout");
+            // Add driver to timed out list and remove their marker
+            if (currentRequestedDriverId != null) {
+                timedOutDriverIds.add(currentRequestedDriverId);
+                removeDriverMarker(currentRequestedDriverId);
+                Log.d("Timeout", "Removed marker for timed out driver (fallback): " + currentRequestedDriverId);
+            }
+            
+            // Still reset the state and show drivers
+            hasActiveRide = false;
+            activeRideRequest = null;
+            currentRequestedDriverId = null;
+            
+            // Show timeout message on the card
+            if (tvStatusMessage != null) {
+                tvStatusMessage.setText("Driver did not respond. Choose another driver below.");
+                tvStatusMessage.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
+            }
+            
+            // Change cancel button to OK
+            if (btnCancelRequest != null) {
+                btnCancelRequest.setText("OK");
+                btnCancelRequest.setBackgroundColor(getResources().getColor(R.color.purple_500));
+            }
+            
+            Toast.makeText(HomeCommuterActivity.this, "Driver did not respond. Please choose another driver.", Toast.LENGTH_LONG).show();
+            stopTimeoutTimer();
+        }
+    }
+
 }

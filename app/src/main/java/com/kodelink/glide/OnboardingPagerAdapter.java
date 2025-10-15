@@ -42,20 +42,37 @@ public class OnboardingPagerAdapter extends FragmentStateAdapter {
         R.drawable.onboarding3
     };
     
+    // Animation complete listener
+    private OnboardingFragment.OnAnimationCompleteListener animationCompleteListener;
+    
     public OnboardingPagerAdapter(@NonNull FragmentActivity fragmentActivity) {
         super(fragmentActivity);
+    }
+    
+    /**
+     * Set the animation complete listener
+     */
+    public void setAnimationCompleteListener(OnboardingFragment.OnAnimationCompleteListener listener) {
+        this.animationCompleteListener = listener;
     }
     
     @NonNull
     @Override
     public Fragment createFragment(int position) {
         // Create fragment with appropriate content based on position
-        return OnboardingFragment.newInstance(
+        OnboardingFragment fragment = OnboardingFragment.newInstance(
             TITLES[position],
             DESCRIPTIONS[position], 
             IMAGE_RESOURCES[position],
             position + 1 // Screen number (1-based)
         );
+        
+        // Set up animation listener if available
+        if (animationCompleteListener != null) {
+            fragment.setOnAnimationCompleteListener(animationCompleteListener);
+        }
+        
+        return fragment;
     }
     
     @Override

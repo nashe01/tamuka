@@ -11,6 +11,15 @@ public class RideHistoryItem {
     public String commuterId;
     public String driverId;
     public String userRole; // "driver" or "commuter"
+    
+    // Enhanced fields for better display
+    public String commuterName;
+    public String driverName;
+    public String commuterPhone;
+    public String driverPhone;
+    public String totalPrice;
+    public String duration; // ride duration if completed
+    public String distance; // ride distance if available
 
     public RideHistoryItem() {
         // Default constructor required for Firebase
@@ -29,5 +38,34 @@ public class RideHistoryItem {
         this.commuterId = commuterId;
         this.driverId = driverId;
         this.userRole = userRole;
+    }
+    
+    // Helper method to get display name for the other party
+    public String getOtherPartyName() {
+        if (userRole.equals("driver")) {
+            return commuterName != null ? commuterName : "Rider: " + commuterId;
+        } else {
+            return driverName != null ? driverName : "Driver: " + driverId;
+        }
+    }
+    
+    // Helper method to get status display text
+    public String getStatusDisplayText() {
+        switch (status.toLowerCase()) {
+            case "completed":
+                return "COMPLETED";
+            case "declined":
+                return "DECLINED";
+            case "cancelled":
+                return "CANCELLED";
+            case "timeout":
+                return "TIMED OUT";
+            case "pending":
+                return "PENDING";
+            case "accepted":
+                return "ACCEPTED";
+            default:
+                return status.toUpperCase();
+        }
     }
 }
