@@ -1124,6 +1124,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                                 // Navigate to ride in progress screen
                                 Intent intent = new Intent(HomeCommuterActivity.this, CommuterRideProgressActivity.class);
                                 intent.putExtra("rideId", activeRideRequest.rideId);
+                                intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                                 startActivity(intent);
                                 break;
                             case "in_progress":
@@ -1139,6 +1140,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                                 // Navigate to ride in progress screen
                                 Intent inProgressIntent = new Intent(HomeCommuterActivity.this, CommuterRideProgressActivity.class);
                                 inProgressIntent.putExtra("rideId", activeRideRequest.rideId);
+                                inProgressIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                                 startActivity(inProgressIntent);
                                 break;
                             case "declined":
@@ -1948,6 +1950,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                     // Navigate to ride progress screen for in_progress rides
                     Intent intent = new Intent(this, CommuterRideProgressActivity.class);
                     intent.putExtra("rideId", ride.rideId);
+                    intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                     startActivity(intent);
                     break;
                 case "completed":

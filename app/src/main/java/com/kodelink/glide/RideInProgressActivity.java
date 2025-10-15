@@ -85,6 +85,10 @@ public class RideInProgressActivity extends AppCompatActivity implements OnMapRe
     private boolean commuterReadyToComplete = false;
     private ValueEventListener rideStatusListener;
     
+    // Map loading tracking - once loaded, never reset
+    private boolean mapLoaded = false;
+    private long mapLoadTime = 0;
+    
     // Map components
     private Marker driverMarker;
     private Marker pickupMarker;
@@ -218,9 +222,15 @@ public class RideInProgressActivity extends AppCompatActivity implements OnMapRe
         // Set fare
         tvFare.setText("$" + String.format("%.2f", currentRide.priceEach));
         
-        // Update map if ready
-        if (googleMap != null) {
+        // Update map only once when it's ready and not already loaded
+        // This ensures map is only loaded once when driver starts the ride
+        if (googleMap != null && !mapLoaded) {
+            Log.d(TAG, "Loading map for the first time at " + System.currentTimeMillis());
             updateMap();
+            mapLoaded = true;
+            mapLoadTime = System.currentTimeMillis();
+        } else if (mapLoaded) {
+            Log.d(TAG, "Map already loaded at " + mapLoadTime + ", skipping reload");
         }
     }
     
@@ -367,11 +377,27 @@ public class RideInProgressActivity extends AppCompatActivity implements OnMapRe
     @Override
     public void onMapReady(@NonNull GoogleMap map) {
         googleMap = map;
-        updateMap();
+        // Only update map if it hasn't been loaded yet
+        if (!mapLoaded && currentRide != null) {
+            Log.d(TAG, "Map ready, loading for the first time at " + System.currentTimeMillis());
+            updateMap();
+            mapLoaded = true;
+            mapLoadTime = System.currentTimeMillis();
+        } else if (mapLoaded) {
+            Log.d(TAG, "Map ready but already loaded at " + mapLoadTime + ", skipping reload");
+        }
     }
     
     private void updateMap() {
         if (googleMap == null || currentRide == null) return;
+        
+        // Double-check to prevent any accidental reloads
+        if (mapLoaded) {
+            Log.d(TAG, "Map already loaded, preventing reload");
+            return;
+        }
+        
+        Log.d(TAG, "Updating map with ride data");
         
         // Clear existing markers and polylines
         if (driverMarker != null) driverMarker.remove();
@@ -484,6 +510,14 @@ public class RideInProgressActivity extends AppCompatActivity implements OnMapRe
      * Draw route from origin to destination using Google Maps Directions API
      */
     private void drawRoute(LatLng origin, LatLng destination) {
+        // Prevent route drawing if map is already loaded
+        if (mapLoaded) {
+            Log.d(TAG, "Map already loaded, skipping route drawing");
+            return;
+        }
+        
+        Log.d(TAG, "Drawing route for the first time");
+        
         // Remove existing route polyline
         if (routePolyline != null) {
             routePolyline.remove();
@@ -497,6 +531,12 @@ public class RideInProgressActivity extends AppCompatActivity implements OnMapRe
      * Get route data from Google Maps Directions API
      */
     private void getRouteFromDirectionsAPI(LatLng origin, LatLng destination) {
+        // Prevent API calls if map is already loaded
+        if (mapLoaded) {
+            Log.d(TAG, "Map already loaded, skipping API call");
+            return;
+        }
+        
         String apiKey = "AIzaSyDc8_axTnQWPUiBWVgp1ifK0zV8Zy21Tqw";
         String originStr = origin.latitude + "," + origin.longitude;
         String destinationStr = destination.latitude + "," + destination.longitude;
