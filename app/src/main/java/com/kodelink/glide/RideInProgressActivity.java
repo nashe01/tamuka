@@ -184,6 +184,9 @@ public class RideInProgressActivity extends AppCompatActivity implements OnMapRe
                     currentRide = rideRequest;
                     updateUI();
                     setupRideStatusListener();
+                    
+                    // Update ride status to in_progress when driver enters this activity
+                    updateRideStatusToInProgress();
                 } else {
                     Toast.makeText(this, "Ride not found", Toast.LENGTH_SHORT).show();
                     finish();
@@ -319,6 +322,22 @@ public class RideInProgressActivity extends AppCompatActivity implements OnMapRe
                 Log.e(TAG, "Failed to complete ride", e);
                 Toast.makeText(this, "Failed to complete ride: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             });
+    }
+    
+    private void updateRideStatusToInProgress() {
+        // Add a small delay to ensure commuter gets the "accepted" status first
+        new android.os.Handler().postDelayed(() -> {
+            // Update ride status to in_progress when driver starts the ride
+            firebaseService.updateRideRequestStatus(rideId, "in_progress")
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "Ride status updated to in_progress");
+                    Toast.makeText(this, "Ride started! Commuter has been notified.", Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to update ride status to in_progress", e);
+                    Toast.makeText(this, "Failed to start ride: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+        }, 2000); // 2 second delay to ensure commuter gets "accepted" status first
     }
     
     private void markDriverReadyToComplete() {

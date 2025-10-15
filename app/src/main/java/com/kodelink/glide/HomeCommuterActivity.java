@@ -932,12 +932,12 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                     destination,
                     numberOfPeople,
                     pricePerPerson
-                ).addOnSuccessListener(aVoid -> {
-                    Log.d("RideRequest", "Ride request created successfully");
+                ).addOnSuccessListener(rideId -> {
+                    Log.d("RideRequest", "Ride request created successfully with ID: " + rideId);
                     
-                    // Create a temporary active ride request for the timer FIRST
+                    // Create active ride request with the actual ride ID from Firebase
                     activeRideRequest = new RideRequest();
-                    activeRideRequest.rideId = "ride_" + System.currentTimeMillis();
+                    activeRideRequest.rideId = rideId;
                     activeRideRequest.status = "pending";
                     activeRideRequest.commuterId = commuterId;
                     activeRideRequest.driverId = driver.driverId;
@@ -975,22 +975,46 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     }
 
     private void showWaitingScreen(String rideId) {
+        Log.d("RideRequest", "Setting up listener for ride ID: " + rideId);
         // Listen for ride request status updates from Realtime Database
         firebaseService.listenRideRequest(rideId, new com.google.firebase.database.ValueEventListener() {
             @Override
             public void onDataChange(com.google.firebase.database.DataSnapshot dataSnapshot) {
+                Log.d("RideRequest", "Listener received data change for ride: " + rideId);
                 if (dataSnapshot.exists()) {
                     String status = dataSnapshot.child("status").getValue(String.class);
+                    Log.d("RideRequest", "Status changed to: " + status);
                     if (status != null) {
                         switch (status) {
                             case "accepted":
+                                Log.d("RideStatus", "Ride accepted - stopping timer and navigating to progress screen");
                                 Toast.makeText(HomeCommuterActivity.this, "Ride accepted! Driver is on the way.", Toast.LENGTH_LONG).show();
                                 // Update active ride state
                                 hasActiveRide = true;
+                                
+                                // Stop the countdown timer and hide the countdown card
+                                stopTimeoutTimer();
+                                hideRideRequestSentCard();
+                                
                                 // Navigate to ride in progress screen
                                 Intent intent = new Intent(HomeCommuterActivity.this, CommuterRideProgressActivity.class);
                                 intent.putExtra("rideId", activeRideRequest.rideId);
                                 startActivity(intent);
+                                break;
+                            case "in_progress":
+                                Log.d("RideStatus", "Ride in progress - stopping timer and navigating to progress screen");
+                                Toast.makeText(HomeCommuterActivity.this, "Ride in progress! You can track your journey.", Toast.LENGTH_LONG).show();
+                                // Update active ride state
+                                hasActiveRide = true;
+                                
+                                // Stop the countdown timer and hide the countdown card
+                                stopTimeoutTimer();
+                                hideRideRequestSentCard();
+                                
+                                // Navigate to ride in progress screen
+                                Intent inProgressIntent = new Intent(HomeCommuterActivity.this, CommuterRideProgressActivity.class);
+                                inProgressIntent.putExtra("rideId", activeRideRequest.rideId);
+                                startActivity(inProgressIntent);
                                 break;
                             case "declined":
                                 Toast.makeText(HomeCommuterActivity.this, "Ride declined. Looking for another driver...", Toast.LENGTH_LONG).show();
@@ -1792,6 +1816,10 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
                 case "in_progress":
                     // Show in progress message and disable new requests
                     Toast.makeText(this, "Ride in progress. Please complete this ride first.", Toast.LENGTH_LONG).show();
+                    // Navigate to ride progress screen for in_progress rides
+                    Intent intent = new Intent(this, CommuterRideProgressActivity.class);
+                    intent.putExtra("rideId", ride.rideId);
+                    startActivity(intent);
                     break;
                 case "completed":
                     Toast.makeText(this, "Ride completed successfully!", Toast.LENGTH_SHORT).show();
@@ -1964,6 +1992,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
      * Stop the timeout timer
      */
     private void stopTimeoutTimer() {
+        Log.d("Timeout", "Stopping timeout timer - timeoutRunnable: " + (timeoutRunnable != null) + ", countdownRunnable: " + (countdownRunnable != null));
         if (timeoutRunnable != null) {
             timeoutHandler.removeCallbacks(timeoutRunnable);
             timeoutRunnable = null;
@@ -1974,7 +2003,7 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
         }
         // Reset countdown seconds
         countdownSeconds = 120;
-        Log.d("Timeout", "Timeout timer and countdown stopped");
+        Log.d("Timeout", "Timeout timer and countdown stopped successfully");
     }
 
     /**
@@ -1983,7 +2012,11 @@ public class HomeCommuterActivity extends AppCompatActivity implements OnMapRead
     private void triggerRideTimeout() {
         Log.d("Timeout", "Triggering ride timeout");
         
-        if (activeRideRequest != null && activeRideRequest.rideId != null) {
+        if (activeRideRequest != null
+
+
+
+                && activeRideRequest.rideId != null) {
             // Timeout the ride request
             firebaseService.timeoutRideRequest(activeRideRequest.rideId)
                 .addOnSuccessListener(aVoid -> {
