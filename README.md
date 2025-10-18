@@ -1,21 +1,21 @@
-# 🚗 Glide - Ride Sharing App
+# Glide - Ride Sharing App
 
 A comprehensive Android ride-sharing application built with modern Android development practices, featuring real-time location tracking, Firebase integration, and a dual-role system for both commuters and drivers.
 
-## 📱 Overview
+## Overview
 
 Glide is a full-featured ride-sharing platform that connects commuters with drivers in real-time. The app provides seamless user experiences for both user types with role-based navigation, real-time location tracking, and comprehensive ride management.
 
-## ✨ Key Features
+## Key Features
 
-### 🔐 Authentication System
+### Authentication System
 - **Firebase Authentication** with email/password login
 - **Role-based registration** (Commuter/Driver)
 - **Secure user management** with Firebase Realtime Database
 - **Profile setup** with role-specific information
 - **Password reset** functionality
 
-### 🚗 Driver Features
+### Driver Features
 - **Real-time location tracking** with GPS integration
 - **Availability toggle** (online/offline status)
 - **Incoming ride request notifications** with real-time updates
@@ -23,7 +23,7 @@ Glide is a full-featured ride-sharing platform that connects commuters with driv
 - **Ride acceptance/decline** with instant status updates
 - **Profile management** with vehicle information
 
-### 🚶 Commuter Features
+### Commuter Features
 - **Interactive map interface** with Google Maps integration
 - **Destination selection** via map interaction or search
 - **Nearby drivers display** with real-time markers
@@ -31,36 +31,36 @@ Glide is a full-featured ride-sharing platform that connects commuters with driv
 - **Real-time ride tracking** and status updates
 - **Ride history** and trip management
 
-### 🗺️ Location Services
+### Location Services
 - **Google Maps integration** with custom markers
 - **Real-time GPS tracking** for both drivers and commuters
 - **Location permissions** handling
 - **Distance calculations** using Haversine formula
 - **Automatic location updates** with Firebase synchronization
 
-### 🔄 Real-time Features
+### Real-time Features
 - **Live ride request updates** across all connected clients
 - **Driver availability monitoring** with real-time UI updates
 - **Instant notifications** for ride status changes
 - **Real-time database synchronization** with Firebase
 - **Automatic UI updates** based on database changes
 
-## 🏗️ Technical Architecture
+## Technical Architecture
 
-### 📱 Android Components
+### Android Components
 - **Minimum SDK**: 24 (Android 7.0)
 - **Target SDK**: 35 (Android 14)
 - **Language**: Java
 - **Architecture**: MVC with Firebase integration
 - **UI Framework**: Material Design 3
 
-### 🔥 Firebase Integration
+### Firebase Integration
 - **Firebase Authentication** for user management
 - **Firebase Realtime Database** for live data
 - **Firebase Analytics** for app insights
 - **Google Play Services** for Maps and Location
 
-### 🗄️ Database Structure
+### Database Structure
 ```
 Firebase Realtime Database:
 ├── commuters/{userId} - Commuter profiles and location
@@ -69,14 +69,14 @@ Firebase Realtime Database:
 └── drivers_live/{driverId} - Real-time driver locations
 ```
 
-### 📦 Dependencies
+### Dependencies
 - **Firebase BoM** - Firebase services management
 - **Google Maps SDK** - Map functionality
 - **Google Play Services** - Location services
 - **Material Design** - UI components
 - **AndroidX** - Modern Android libraries
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - Android Studio Arctic Fox or later
@@ -111,9 +111,9 @@ Firebase Realtime Database:
    ./gradlew assembleDebug
    ```
 
-## 📱 App Flow
+## App Flow
 
-### 🎯 User Journey
+### User Journey
 
 #### New User Registration
 1. **Splash Screen** → **Onboarding** (3 screens)
@@ -127,21 +127,21 @@ Firebase Realtime Database:
 2. **Role Detection** → Automatic navigation based on user type
 3. **Dashboard** → Access role-specific features
 
-### 🚗 Driver Workflow
+### Driver Workflow
 1. **Go Online** → Toggle availability status
 2. **Receive Requests** → Real-time ride request notifications
 3. **Accept/Decline** → Respond to ride requests
 4. **Navigate to Pickup** → GPS navigation to commuter
 5. **Complete Ride** → End trip and receive payment
 
-### 🚶 Commuter Workflow
+### Commuter Workflow
 1. **Set Destination** → Long-press on map or search
 2. **View Drivers** → See nearby available drivers
 3. **Request Ride** → Send request to selected driver
 4. **Track Driver** → Real-time driver location updates
 5. **Complete Trip** → Rate driver and make payment
 
-## 🛠️ Development Phases
+## Development Phases
 
 ### Phase 1: Authentication & Onboarding ✅
 - Splash screen with auto-navigation
@@ -167,7 +167,7 @@ Firebase Realtime Database:
 - Automatic UI updates
 - Distance calculations
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 app/
@@ -204,7 +204,7 @@ app/
 └── google-services.json
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### Firebase Setup
 1. Create Firebase project
@@ -226,7 +226,7 @@ app/
 <uses-permission android:name="android.permission.INTERNET"/>
 ```
 
-## 🧪 Testing
+## Testing
 
 ### Test Data
 The app includes sample data for testing:
@@ -242,7 +242,7 @@ The app includes sample data for testing:
 - Driver availability toggle
 - Firebase database operations
 
-## 🚀 Deployment
+## Deployment
 
 ### Build Configuration
 ```kotlin
@@ -263,7 +263,7 @@ android {
 ./gradlew assembleRelease
 ```
 
-## 📊 Performance Features
+## Performance Features
 
 - **Real-time updates** with Firebase listeners
 - **Efficient location tracking** with FusedLocationProviderClient
@@ -271,7 +271,7 @@ android {
 - **Material Design** for smooth UI interactions
 - **Edge-to-edge** display for modern Android experience
 
-## 🔒 Security Features
+## Security Features
 
 - **Firebase Authentication** for secure user management
 - **Role-based access control** for different user types
@@ -279,7 +279,7 @@ android {
 - **Secure database rules** for data protection
 - **Location permission handling** with user consent
 
-## 🐛 Known Issues & Solutions
+## Known Issues & Solutions
 
 ### Resolved Issues
 - ✅ Authentication flow timing issues
@@ -295,7 +295,7 @@ android {
 - Payment processing requires gateway integration
 - Offline functionality needs implementation
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -303,25 +303,25 @@ android {
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 👥 Team
+## Team
 
 - **Development**: Kodelink Team
 - **Design**: Material Design 3
 - **Backend**: Firebase Services
 - **Maps**: Google Maps Platform
 
-## 📞 Support
+## Support
 
 For support and questions:
 - Create an issue in the repository
 - Contact the development team
 - Check the documentation in the `/docs` folder
 
-## 🔮 Future Enhancements
+## Future Enhancements
 
 ### Phase 4+ Features
 - **Address search** with Google Places API
@@ -343,4 +343,4 @@ For support and questions:
 
 ---
 
-**Glide** - Connecting people, one ride at a time! 🚗💨
+**Glide** - Connecting people, one ride at a time!
