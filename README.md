@@ -50,15 +50,15 @@ Glide is a full-featured ride-sharing platform that connects commuters with driv
 ### Android Components
 - **Minimum SDK**: 24 (Android 7.0)
 - **Target SDK**: 35 (Android 14)
-- **Language**: Java
+- **Language**: ![Java](https://img.shields.io/badge/Java-ED8B00?style=flat&logo=openjdk&logoColor=white)
 - **Architecture**: MVC with Firebase integration
-- **UI Framework**: Material Design 3
+- **UI Framework**: ![Material Design](https://img.shields.io/badge/Material%20Design-757575?style=flat&logo=material-design&logoColor=white)
 
 ### Firebase Integration
-- **Firebase Authentication** for user management
-- **Firebase Realtime Database** for live data
-- **Firebase Analytics** for app insights
-- **Google Play Services** for Maps and Location
+- ![Firebase](https://img.shields.io/badge/Firebase-039BE5?style=flat&logo=Firebase&logoColor=white) **Authentication** for user management
+- ![Firebase](https://img.shields.io/badge/Firebase-039BE5?style=flat&logo=Firebase&logoColor=white) **Realtime Database** for live data
+- ![Firebase](https://img.shields.io/badge/Firebase-039BE5?style=flat&logo=Firebase&logoColor=white) **Analytics** for app insights
+- ![Google Play](https://img.shields.io/badge/Google_Play-414141?style=flat&logo=google-play&logoColor=white) **Services** for Maps and Location
 
 ### Database Structure
 ```
@@ -69,20 +69,20 @@ Firebase Realtime Database:
 └── drivers_live/{driverId} - Real-time driver locations
 ```
 
-### Dependencies
-- **Firebase BoM** - Firebase services management
-- **Google Maps SDK** - Map functionality
-- **Google Play Services** - Location services
-- **Material Design** - UI components
-- **AndroidX** - Modern Android libraries
+### Technology Stack
+- ![Firebase](https://img.shields.io/badge/Firebase-039BE5?style=flat&logo=Firebase&logoColor=white) **Firebase BoM** - Firebase services management
+- ![Google Maps](https://img.shields.io/badge/Google_Maps-4285F4?style=flat&logo=google-maps&logoColor=white) **Maps SDK** - Map functionality
+- ![Google Play](https://img.shields.io/badge/Google_Play-414141?style=flat&logo=google-play&logoColor=white) **Play Services** - Location services
+- ![Material Design](https://img.shields.io/badge/Material%20Design-757575?style=flat&logo=material-design&logoColor=white) **Material Design** - UI components
+- ![Android](https://img.shields.io/badge/Android-3DDC84?style=flat&logo=android&logoColor=white) **AndroidX** - Modern Android libraries
 
 ## Getting Started
 
 ### Prerequisites
-- Android Studio Arctic Fox or later
-- Android SDK 24+
-- Google Maps API key
-- Firebase project setup
+- ![Android Studio](https://img.shields.io/badge/Android_Studio-3DDC84?style=flat&logo=android-studio&logoColor=white) **Android Studio** Arctic Fox or later
+- ![Android](https://img.shields.io/badge/Android-3DDC84?style=flat&logo=android&logoColor=white) **Android SDK** 24+
+- ![Google Maps](https://img.shields.io/badge/Google_Maps-4285F4?style=flat&logo=google-maps&logoColor=white) **Google Maps API** key
+- ![Firebase](https://img.shields.io/badge/Firebase-039BE5?style=flat&logo=Firebase&logoColor=white) **Firebase** project setup
 
 ### Installation
 
@@ -144,28 +144,28 @@ Firebase Realtime Database:
 ## Development Phases
 
 ### Phase 1: Authentication & Onboarding ✅
-- Splash screen with auto-navigation
-- 3-screen onboarding flow
-- Firebase authentication system
-- Role-based registration (Commuter/Driver)
-- Profile setup screens
-- Navigation flow implementation
+- ![Android](https://img.shields.io/badge/Android-3DDC84?style=flat&logo=android&logoColor=white) **Splash screen** with auto-navigation
+- ![Material Design](https://img.shields.io/badge/Material%20Design-757575?style=flat&logo=material-design&logoColor=white) **3-screen onboarding** flow
+- ![Firebase](https://img.shields.io/badge/Firebase-039BE5?style=flat&logo=Firebase&logoColor=white) **Authentication** system
+- ![Java](https://img.shields.io/badge/Java-ED8B00?style=flat&logo=openjdk&logoColor=white) **Role-based registration** (Commuter/Driver)
+- ![Material Design](https://img.shields.io/badge/Material%20Design-757575?style=flat&logo=material-design&logoColor=white) **Profile setup** screens
+- ![Android](https://img.shields.io/badge/Android-3DDC84?style=flat&logo=android&logoColor=white) **Navigation flow** implementation
 
 ### Phase 2: Core Features ✅
-- Main application interfaces
-- Ride request system
-- Driver matching and acceptance
-- Trip management
-- Payment system integration
-- User profile and settings
+- ![Material Design](https://img.shields.io/badge/Material%20Design-757575?style=flat&logo=material-design&logoColor=white) **Main application** interfaces
+- ![Firebase](https://img.shields.io/badge/Firebase-039BE5?style=flat&logo=Firebase&logoColor=white) **Ride request** system
+- ![Java](https://img.shields.io/badge/Java-ED8B00?style=flat&logo=openjdk&logoColor=white) **Driver matching** and acceptance
+- ![Android](https://img.shields.io/badge/Android-3DDC84?style=flat&logo=android&logoColor=white) **Trip management**
+- ![Payment](https://img.shields.io/badge/Payment-4285F4?style=flat&logo=google-pay&logoColor=white) **Payment system** integration
+- ![Material Design](https://img.shields.io/badge/Material%20Design-757575?style=flat&logo=material-design&logoColor=white) **User profile** and settings
 
 ### Phase 3: Real-time Features ✅
-- Firebase Realtime Database integration
-- Live ride request updates
-- Driver availability monitoring
-- Real-time location tracking
-- Automatic UI updates
-- Distance calculations
+- ![Firebase](https://img.shields.io/badge/Firebase-039BE5?style=flat&logo=Firebase&logoColor=white) **Realtime Database** integration
+- ![Real-time](https://img.shields.io/badge/Real--time-FF6B6B?style=flat&logo=clock&logoColor=white) **Live ride request** updates
+- ![Android](https://img.shields.io/badge/Android-3DDC84?style=flat&logo=android&logoColor=white) **Driver availability** monitoring
+- ![Google Maps](https://img.shields.io/badge/Google_Maps-4285F4?style=flat&logo=google-maps&logoColor=white) **Real-time location** tracking
+- ![Material Design](https://img.shields.io/badge/Material%20Design-757575?style=flat&logo=material-design&logoColor=white) **Automatic UI** updates
+- ![Java](https://img.shields.io/badge/Java-ED8B00?style=flat&logo=openjdk&logoColor=white) **Distance calculations**
 
 ## Project Structure
 
@@ -265,19 +265,19 @@ android {
 
 ## Performance Features
 
-- **Real-time updates** with Firebase listeners
-- **Efficient location tracking** with FusedLocationProviderClient
-- **Optimized database queries** with proper indexing
-- **Material Design** for smooth UI interactions
-- **Edge-to-edge** display for modern Android experience
+- ![Firebase](https://img.shields.io/badge/Firebase-039BE5?style=flat&logo=Firebase&logoColor=white) **Real-time updates** with Firebase listeners
+- ![Google Play](https://img.shields.io/badge/Google_Play-414141?style=flat&logo=google-play&logoColor=white) **Efficient location tracking** with FusedLocationProviderClient
+- ![Database](https://img.shields.io/badge/Database-336791?style=flat&logo=firebase&logoColor=white) **Optimized database queries** with proper indexing
+- ![Material Design](https://img.shields.io/badge/Material%20Design-757575?style=flat&logo=material-design&logoColor=white) **Material Design** for smooth UI interactions
+- ![Android](https://img.shields.io/badge/Android-3DDC84?style=flat&logo=android&logoColor=white) **Edge-to-edge** display for modern Android experience
 
 ## Security Features
 
-- **Firebase Authentication** for secure user management
-- **Role-based access control** for different user types
-- **Input validation** and sanitization
-- **Secure database rules** for data protection
-- **Location permission handling** with user consent
+- ![Firebase](https://img.shields.io/badge/Firebase-039BE5?style=flat&logo=Firebase&logoColor=white) **Firebase Authentication** for secure user management
+- ![Security](https://img.shields.io/badge/Security-FF6B6B?style=flat&logo=security&logoColor=white) **Role-based access control** for different user types
+- ![Java](https://img.shields.io/badge/Java-ED8B00?style=flat&logo=openjdk&logoColor=white) **Input validation** and sanitization
+- ![Database](https://img.shields.io/badge/Database-336791?style=flat&logo=firebase&logoColor=white) **Secure database rules** for data protection
+- ![Android](https://img.shields.io/badge/Android-3DDC84?style=flat&logo=android&logoColor=white) **Location permission handling** with user consent
 
 ## Known Issues & Solutions
 
@@ -324,22 +324,22 @@ For support and questions:
 ## Future Enhancements
 
 ### Phase 4+ Features
-- **Address search** with Google Places API
-- **Push notifications** for ride updates
-- **Payment integration** with multiple methods
-- **Ride history** and rating system
-- **Advanced driver filtering** (distance, rating, vehicle type)
-- **Real-time ETA** calculations
-- **In-app messaging** between users
-- **Ride sharing** and carpooling features
+- ![Google Maps](https://img.shields.io/badge/Google_Maps-4285F4?style=flat&logo=google-maps&logoColor=white) **Address search** with Google Places API
+- ![Firebase](https://img.shields.io/badge/Firebase-039BE5?style=flat&logo=Firebase&logoColor=white) **Push notifications** for ride updates
+- ![Payment](https://img.shields.io/badge/Payment-4285F4?style=flat&logo=google-pay&logoColor=white) **Payment integration** with multiple methods
+- ![Database](https://img.shields.io/badge/Database-336791?style=flat&logo=firebase&logoColor=white) **Ride history** and rating system
+- ![Java](https://img.shields.io/badge/Java-ED8B00?style=flat&logo=openjdk&logoColor=white) **Advanced driver filtering** (distance, rating, vehicle type)
+- ![Real-time](https://img.shields.io/badge/Real--time-FF6B6B?style=flat&logo=clock&logoColor=white) **Real-time ETA** calculations
+- ![Android](https://img.shields.io/badge/Android-3DDC84?style=flat&logo=android&logoColor=white) **In-app messaging** between users
+- ![Material Design](https://img.shields.io/badge/Material%20Design-757575?style=flat&logo=material-design&logoColor=white) **Ride sharing** and carpooling features
 
 ### Technical Improvements
-- **Offline data caching** for better performance
-- **Background location updates** for continuous tracking
-- **Battery optimization** for location services
-- **Enhanced error handling** and retry mechanisms
-- **Performance optimization** for large datasets
-- **Security enhancements** for user data protection
+- ![Database](https://img.shields.io/badge/Database-336791?style=flat&logo=firebase&logoColor=white) **Offline data caching** for better performance
+- ![Google Play](https://img.shields.io/badge/Google_Play-414141?style=flat&logo=google-play&logoColor=white) **Background location updates** for continuous tracking
+- ![Android](https://img.shields.io/badge/Android-3DDC84?style=flat&logo=android&logoColor=white) **Battery optimization** for location services
+- ![Java](https://img.shields.io/badge/Java-ED8B00?style=flat&logo=openjdk&logoColor=white) **Enhanced error handling** and retry mechanisms
+- ![Performance](https://img.shields.io/badge/Performance-00C851?style=flat&logo=speedometer&logoColor=white) **Performance optimization** for large datasets
+- ![Security](https://img.shields.io/badge/Security-FF6B6B?style=flat&logo=security&logoColor=white) **Security enhancements** for user data protection
 
 ---
 
