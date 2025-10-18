@@ -2,6 +2,14 @@
 
 A comprehensive Android ride-sharing application built with modern Android development practices, featuring real-time location tracking, Firebase integration, and a dual-role system for both commuters and drivers.
 
+## Tech Stack
+
+![Java](https://img.shields.io/badge/Java-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
+![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)
+![Firebase](https://img.shields.io/badge/Firebase-039BE5?style=for-the-badge&logo=Firebase&logoColor=white)
+![Google Maps](https://img.shields.io/badge/Google_Maps-4285F4?style=for-the-badge&logo=google-maps&logoColor=white)
+![Material Design](https://img.shields.io/badge/Material%20Design-757575?style=for-the-badge&logo=material-design&logoColor=white)
+
 ## Overview
 
 Glide is a full-featured ride-sharing platform that connects commuters with drivers in real-time. The app provides seamless user experiences for both user types with role-based navigation, real-time location tracking, and comprehensive ride management.
